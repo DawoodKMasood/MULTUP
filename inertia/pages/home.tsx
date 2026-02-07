@@ -5,7 +5,7 @@ export default function Home() {
 
   return (
     <>
-      <Head title="Homepage" />
+      <Head title="MULTUP" />
     </>
   )
 }

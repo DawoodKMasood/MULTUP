@@ -3,8 +3,6 @@ import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
 import FileMirror from './file_mirror.js'
 
-export type FileStatus = 'pending' | 'processing' | 'completed' | 'failed'
-
 export default class File extends BaseModel {
   @column({ isPrimary: true })
   declare id: string
@@ -14,9 +12,6 @@ export default class File extends BaseModel {
 
   @column()
   declare size: number
-
-  @column()
-  declare status: FileStatus
 
   @column()
   declare path: string

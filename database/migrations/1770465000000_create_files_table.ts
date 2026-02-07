@@ -7,9 +7,8 @@ export default class extends BaseSchema {
     this.schema.createTable(this.tableName, (table) => {
       table.uuid('id').primary().defaultTo(this.raw('gen_random_uuid()'))
       table.string('filename').notNullable()
-      table.string('path').notNullable()
       table.bigInteger('size').notNullable()
-      table.string('status').notNullable()
+      table.string('path').notNullable()
       table.timestamp('created_at').notNullable()
       table.timestamp('updated_at').nullable()
     })
