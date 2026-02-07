@@ -4,13 +4,13 @@
 
 Design a fully serverless backend where a user uploads a file once and the system automatically mirrors the file to multiple third-party hosting websites. The system must:
 
-* Accept multipart uploads via an API
-* Temporarily store the file in object storage (S3)
-* Dispatch upload tasks to multiple mirror providers
-* Execute upload logic in serverless workers
-* Use rotating outbound IP addresses
-* Track progress and failures
-* Delete the file from S3 after completion
+- Accept multipart uploads via an API
+- Temporarily store the file in object storage (S3)
+- Dispatch upload tasks to multiple mirror providers
+- Execute upload logic in serverless workers
+- Use rotating outbound IP addresses
+- Track progress and failures
+- Delete the file from S3 after completion
 
 This document describes a production-safe architecture using only managed serverless services.
 
@@ -24,10 +24,10 @@ Instead of maintaining background workers and queues, we delegate job orchestrat
 
 Serverless systems work best when every operation is:
 
-* stateless
-* idempotent
-* short-lived
-* retryable
+- stateless
+- idempotent
+- short-lived
+- retryable
 
 The mirror uploader fits perfectly if broken into small tasks.
 
@@ -63,11 +63,11 @@ Delete from S3
 
 Responsibilities:
 
-* Authenticate user
-* Accept multipart upload
-* Stream directly to S3
-* Create database record
-* Create mirror jobs
+- Authenticate user
+- Accept multipart upload
+- Stream directly to S3
+- Create database record
+- Create mirror jobs
 
 Important: The API **never uploads to mirror websites**.
 
@@ -75,10 +75,10 @@ After upload completes, it creates one job per mirror provider.
 
 Example mirrors:
 
-* Pixeldrain
-* Gofile
-* Streamtape
-* Filemoon
+- Pixeldrain
+- Gofile
+- Streamtape
+- Filemoon
 
 ---
 
@@ -88,9 +88,9 @@ S3 is used as **temporary origin storage only**.
 
 Required configuration:
 
-* private bucket
-* presigned GET URLs
-* lifecycle rule: auto delete after 24–48h (safety cleanup)
+- private bucket
+- presigned GET URLs
+- lifecycle rule: auto delete after 24–48h (safety cleanup)
 
 The API stores files using streaming upload (not buffering).
 
@@ -115,9 +115,9 @@ Message:
 
 Key properties used:
 
-* automatic retry
-* visibility timeout
-* dead letter queue
+- automatic retry
+- visibility timeout
+- dead letter queue
 
 No queue server must be hosted or maintained.
 
@@ -149,12 +149,12 @@ The correct platform is:
 
 Capabilities:
 
-* Node.js 20 runtime
-* up to 10 GB RAM
-* up to 6 vCPU
-* 15-minute execution time
-* native HTTP streaming support
-* automatic scaling per message
+- Node.js 20 runtime
+- up to 10 GB RAM
+- up to 6 vCPU
+- 15-minute execution time
+- native HTTP streaming support
+- automatic scaling per message
 
 The Lambda function is directly attached to the SQS queue:
 
@@ -166,11 +166,11 @@ No polling or worker service exists.
 
 AWS automatically handles:
 
-* concurrency
-* retries
-* throttling
-* scaling
-* backpressure
+- concurrency
+- retries
+- throttling
+- scaling
+- backpressure
 
 ---
 
@@ -310,16 +310,16 @@ Build once, deploy twice.
 
 Runs on:
 
-* VPS
-* EC2
-* Fly.io
-* Railway
+- VPS
+- EC2
+- Fly.io
+- Railway
 
 ### Worker Deployment
 
 Runs on:
 
-* AWS Lambda (container image)
+- AWS Lambda (container image)
 
 You push a Docker image to AWS ECR and attach it to the Lambda function.
 
@@ -383,9 +383,9 @@ Handled entirely by SQS.
 
 Configuration:
 
-* visibility timeout: 15–30 minutes
-* max receive count: 5
-* dead letter queue enabled
+- visibility timeout: 15–30 minutes
+- max receive count: 5
+- dead letter queue enabled
 
 If worker crashes or times out:
 
@@ -416,16 +416,16 @@ Prevents duplicate writes and race conditions.
 
 ### Upload Restrictions
 
-* max file size
-* allowed extensions
-* rate limit per IP
+- max file size
+- allowed extensions
+- rate limit per IP
 
 ### Malware Protection
 
 Options:
 
-* ClamAV Lambda scan
-* VirusTotal API
+- ClamAV Lambda scan
+- VirusTotal API
 
 Files should be scanned **before mirror jobs are created**.
 
@@ -451,9 +451,9 @@ Prevents unexpected storage costs.
 
 Main costs:
 
-* S3 storage
-* outbound bandwidth
-* Lambda execution time
+- S3 storage
+- outbound bandwidth
+- Lambda execution time
 
 This system is bandwidth-heavy, not CPU-heavy.
 
@@ -477,11 +477,11 @@ App → SQS → Lambda auto-runs code
 
 SQS already provides:
 
-* persistence
-* retries
-* concurrency control
-* scheduling
-* backpressure
+- persistence
+- retries
+- concurrency control
+- scheduling
+- backpressure
 
 Redis is unnecessary.
 
@@ -502,11 +502,11 @@ Redis is unnecessary.
 
 ## Final System Properties
 
-* horizontally scalable
-* zero background servers
-* automatic IP rotation
-* retry-safe
-* modular mirror providers
-* minimal maintenance
+- horizontally scalable
+- zero background servers
+- automatic IP rotation
+- retry-safe
+- modular mirror providers
+- minimal maintenance
 
 This architecture supports a public mirror hosting platform without the operational overhead of Redis workers or persistent processing servers.
