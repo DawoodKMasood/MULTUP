@@ -13,6 +13,9 @@ export default class extends BaseSchema {
       table.integer('attempts').notNullable().defaultTo(0)
       table.timestamp('created_at').notNullable()
       table.timestamp('updated_at').nullable()
+
+      table.index('file_id')
+      table.index('status')
     })
   }
 

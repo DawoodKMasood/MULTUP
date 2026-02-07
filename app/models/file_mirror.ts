@@ -3,6 +3,8 @@ import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import File from './file.js'
 
+export type MirrorStatus = 'queued' | 'uploading' | 'done' | 'failed'
+
 export default class FileMirror extends BaseModel {
   @column({ isPrimary: true })
   declare id: string
@@ -14,7 +16,7 @@ export default class FileMirror extends BaseModel {
   declare mirror: string
 
   @column()
-  declare status: string
+  declare status: MirrorStatus
 
   @column()
   declare url: string | null
