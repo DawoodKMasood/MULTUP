@@ -66,13 +66,17 @@
     "@aws-sdk/client-s3": "^3.985.0",
     "@aws-sdk/lib-storage": "^3.985.0",
     "@inertiajs/react": "^2.3.13",
+    "@tailwindcss/vite": "^4.1.18",
+    "@uppy/core": "^5.2.0",
+    "@uppy/xhr-upload": "^5.1.1",
     "@vinejs/vine": "^3.0.1",
     "edge.js": "^6.2.1",
     "luxon": "^3.7.2",
     "pg": "^8.18.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "tailwindcss": "^4.1.18"
   },
   "hotHook": {
     "boundaries": [
