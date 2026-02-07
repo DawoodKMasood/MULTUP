@@ -19,7 +19,12 @@ export default class UploadsController {
       multipart.onFile('file', {}, async (part: MultipartStream) => {
         try {
           const filename = `${part.filename || 'file_' + new Date().toISOString().replace(/[:.]/g, '-')}`
-          const fileId = `uploads/${randomUUID()}`
+          const fileId = randomUUID()
+          const now = new Date()
+          const year = now.getFullYear()
+          const month = String(now.getMonth() + 1).padStart(2, '0')
+          const day = String(now.getDate()).padStart(2, '0')
+          const path = `uploads/${year}/${month}/${day}/${fileId}`
           const body = new PassThrough()
           let size = 0
 
@@ -35,7 +40,7 @@ export default class UploadsController {
             client: s3Client,
             params: {
               Bucket: env.get('S3_BUCKET'),
-              Key: fileId,
+              Key: path,
               Body: body,
               ContentType: Array.isArray(contentType) ? contentType[0] : contentType,
             },
@@ -46,6 +51,7 @@ export default class UploadsController {
           const file = await File.create({
             id: fileId,
             filename,
+            path,
             size,
             status: 'pending',
           })

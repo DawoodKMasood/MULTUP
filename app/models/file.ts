@@ -16,6 +16,9 @@ export default class File extends BaseModel {
   @column()
   declare status: string
 
+  @column()
+  declare path: string
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
