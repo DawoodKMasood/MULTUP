@@ -8,6 +8,4 @@
 */
 
 import router from '@adonisjs/core/services/router'
-const UploadsController = () => import('#controllers/uploads_controller')
 router.on('/').renderInertia('home')
-router.post('/upload', [UploadsController, 'store'])
