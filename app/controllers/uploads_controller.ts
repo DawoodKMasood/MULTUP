@@ -3,6 +3,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import File from '#models/file'
 import db from '@adonisjs/lucid/services/db'
 import drive from '@adonisjs/drive/services/main'
+import logger from '@adonisjs/core/services/logger'
 
 export default class UploadsController {
     async store({ request, response }: HttpContext) {
@@ -11,8 +12,11 @@ export default class UploadsController {
             size: '10mb'
         })
 
-        if (!file) {
-            return response.badRequest({ error: 'File missing' })
+        if (!file || !file.isValid || file.hasErrors) {
+            return response.badRequest({
+                error: 'File missing or invalid',
+                details: file?.errors
+            })
         }
 
         if (!file.clientName) {
@@ -20,23 +24,16 @@ export default class UploadsController {
         }
 
         if (!file.size) {
-            return response.badRequest({ error: 'Empty file' })
+            return response.badRequest({ error: 'File is empty' })
         }
 
-        if (!file.isValid) {
-            return response.badRequest({ error: 'File is not valid' })
-        }
-        
         if (!file.tmpPath) {
             return response.badRequest({ error: 'File is not uploaded' })
         }
-
-        if (file.hasErrors) {
-            return response.badRequest({ error: 'File has errors' })
-        }
         
         const id = cuid();
-        const key = `uploads/${id}.${file.extname}`
+        const ext = file.extname?.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'bin'
+        const key = `uploads/${id}.${ext}`
 
         const trx = await db.transaction()
 
@@ -57,16 +54,13 @@ export default class UploadsController {
             
             try {
                 await drive.use().delete(key)
-            } catch (_) {
-                return response.internalServerError({ 
-                    error: 'File upload failed',
-                    message: 'Failed to clean up file'
-                })
+            } catch (cleanupError) {
+                logger.error('S3 cleanup failed in uploads_controller (store):', cleanupError)
             }
             
-            return response.internalServerError({ 
+            return response.internalServerError({
                 error: 'File upload failed',
-                message: 'Failed to save file'
+                message: 'Unable to save file'
             })
         }
     }
