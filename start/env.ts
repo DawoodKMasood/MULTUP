@@ -35,10 +35,4 @@ export default await Env.create(new URL('../', import.meta.url), {
   DB_USER: Env.schema.string(),
   DB_PASSWORD: Env.schema.string.optional(),
   DB_DATABASE: Env.schema.string(),
-  S3_REGION: Env.schema.string(),
-  S3_BUCKET: Env.schema.string(),
-  S3_ACCESS_KEY_ID: Env.schema.string(),
-  S3_SECRET_ACCESS_KEY: Env.schema.string(),
-  S3_ENDPOINT: Env.schema.string.optional(),
-  S3_FORCE_PATH_STYLE: Env.schema.boolean.optional(),
 })
