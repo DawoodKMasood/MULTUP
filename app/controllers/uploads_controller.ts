@@ -30,13 +30,15 @@ export default class UploadsController {
           part.on('error', (error: unknown) => reject(error))
           part.pipe(body)
 
+          const contentType = part.headers['content-type']
+
           const upload = new Upload({
             client: s3Client,
             params: {
               Bucket: env.get('S3_BUCKET'),
               Key: key,
               Body: body,
-              ContentType: part.headers['content-type'],
+              ContentType: Array.isArray(contentType) ? contentType[0] : contentType,
             },
           })
 
