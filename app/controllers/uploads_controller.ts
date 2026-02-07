@@ -43,12 +43,20 @@ export default class UploadsController {
             const fileRecord = await File.create({
                 filename: file.clientName,
                 size: file.size,
+                status: 'pending',
                 path: key,
             }, { client: trx })
 
             await trx.commit()
 
-            return response.json(fileRecord)
+            return response.json(
+                {
+                    id: fileRecord.id,
+                    filename: fileRecord.filename,
+                    status: fileRecord.status,
+                    message : 'File uploaded successfully'
+                }
+            )
         } catch (error) {
             await trx.rollback()
             
