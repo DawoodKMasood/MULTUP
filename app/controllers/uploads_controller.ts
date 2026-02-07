@@ -5,7 +5,6 @@ import { PassThrough } from 'node:stream'
 import env from '#start/env'
 import s3Client from '#services/s3_client'
 import File from '#models/file'
-import FileMirror from '#models/file_mirror'
 
 type MultipartStream = NodeJS.ReadableStream & {
   filename?: string
@@ -19,8 +18,8 @@ export default class UploadsController {
     return new Promise((resolve, reject) => {
       multipart.onFile('file', {}, async (part: MultipartStream) => {
         try {
-          const filename = part.filename || 'upload'
-          const key = `uploads/${randomUUID()}-${filename}`
+          const filename = `${part.filename || 'file_' + new Date().toISOString().replace(/[:.]/g, '-')}`
+          const fileId = `uploads/${randomUUID()}`
           const body = new PassThrough()
           let size = 0
 
@@ -36,7 +35,7 @@ export default class UploadsController {
             client: s3Client,
             params: {
               Bucket: env.get('S3_BUCKET'),
-              Key: key,
+              Key: fileId,
               Body: body,
               ContentType: Array.isArray(contentType) ? contentType[0] : contentType,
             },
@@ -45,17 +44,10 @@ export default class UploadsController {
           await upload.done()
 
           const file = await File.create({
+            id: fileId,
             filename,
             size,
             status: 'pending',
-          })
-
-          await FileMirror.create({
-            fileId: file.id,
-            mirror: 's3',
-            status: 'stored',
-            url: `s3://${env.get('S3_BUCKET')}/${key}`,
-            attempts: 0,
           })
 
           resolve(response.ok(file))
