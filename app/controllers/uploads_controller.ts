@@ -54,7 +54,7 @@ export default class UploadsController {
                     id: fileRecord.id,
                     filename: fileRecord.filename,
                     status: fileRecord.status,
-                    message : 'File uploaded successfully'
+                    message: 'File uploaded successfully'
                 }
             )
         } catch (error) {
