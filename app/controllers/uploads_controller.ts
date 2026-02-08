@@ -4,6 +4,8 @@ import File from '#models/file'
 import db from '@adonisjs/lucid/services/db'
 import drive from '@adonisjs/drive/services/main'
 import logger from '@adonisjs/core/services/logger'
+import queue from '@rlanz/bull-queue/services/main'
+import MirrorFileJob from '#jobs/mirror_file_job'
 
 export default class UploadsController {
     async store({ request, response }: HttpContext) {
@@ -48,6 +50,8 @@ export default class UploadsController {
             }, { client: trx })
 
             await trx.commit()
+
+            queue.dispatch(MirrorFileJob, { fileId: fileRecord.id })
 
             return response.json(
                 {
