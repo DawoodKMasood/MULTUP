@@ -8,7 +8,7 @@ export default class OneFichierMirrorSeeder extends BaseSeeder {
       {
         name: '1fichier.com',
         config: {
-          apiKey: null,
+          apiKey: process.env.ONEFICHIER_API_KEY || null,
           retentionDays: 15,
           maxFileSize: 100000000,
         },

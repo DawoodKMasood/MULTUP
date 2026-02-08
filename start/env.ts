@@ -63,5 +63,12 @@ export default await Env.create(new URL('../', import.meta.url), {
   |----------------------------------------------------------
   */
   APP_URL: Env.schema.string(),
-  MIRROR_WORKER_URL: Env.schema.string()
+  MIRROR_WORKER_URL: Env.schema.string(),
+
+  /*
+  |----------------------------------------------------------
+  | Variables for 1fichier mirror
+  |----------------------------------------------------------
+  */
+  ONEFICHIER_API_KEY: Env.schema.string.optional()
 })
