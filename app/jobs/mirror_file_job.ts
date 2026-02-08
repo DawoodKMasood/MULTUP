@@ -82,7 +82,7 @@ export default class MirrorFileJob extends Job {
 
     try {
       const result = await this.callWorker(jobId, file, service, config)
-      await this.handleWorkerResult(fileMirror, result, jobId, service, file.id)
+      await this.handleWorkerResult(fileMirror, result, jobId, service)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       await this.handleWorkerError(fileMirror, errorMessage, logCtx, jobId)
@@ -122,7 +122,6 @@ export default class MirrorFileJob extends Job {
   private async handleWorkerResult(
     fileMirror: FileMirror,
     result: MirrorUploadResult,
-    jobId: string,
     service: string,
     fileId: string
   ): Promise<void> {
