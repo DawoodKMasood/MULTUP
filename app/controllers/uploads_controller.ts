@@ -11,7 +11,7 @@ export default class UploadsController {
     async store({ request, response }: HttpContext) {
         
         const file = request.file('file', {
-            size: '10mb'
+            size: '100mb'
         })
 
         if (!file || !file.isValid || file.hasErrors) {
