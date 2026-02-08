@@ -1,7 +1,6 @@
 import { Job } from '@rlanz/bull-queue'
 import File from '#models/file'
 import FileMirror from '#models/file_mirror'
-import drive from '@adonisjs/drive/services/main'
 import logger from '@adonisjs/core/services/logger'
 
 interface MirrorFileJobPayload {
