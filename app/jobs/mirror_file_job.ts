@@ -35,28 +35,23 @@ export default class MirrorFileJob extends Job {
 
   async handle(payload: MirrorFileJobPayload) {
     const { fileId, mirror } = payload
-    const logCtx = { fileId, job: 'mirror' }
-
-    logger.info(logCtx, 'Starting mirror job')
 
     const file = await File.find(fileId)
     if (!file) {
-      logger.error(logCtx, 'File not found')
+      logger.error({ fileId, job: 'mirror' }, 'File not found')
       throw new Error(`File not found: ${fileId}`)
     }
 
     await file.merge({ status: 'processing' }).save()
-    logger.info({ ...logCtx, status: 'processing' }, 'File status updated')
 
     const mirrorsToProcess = mirror ? [mirror] : await this.getMirrorsList()
     await Promise.all(mirrorsToProcess.map((m) => this.processMirror(file, m)))
 
     await this.updateFileStatus(fileId)
-    logger.info(logCtx, 'Mirror job completed')
   }
 
   private async processMirror(file: File, service: string): Promise<void> {
-    const logCtx = { fileId: file.id, service, job: 'processMirror' }
+    const logCtx = { fileId: file.id, service }
 
     const existingMirror = await FileMirror.query()
       .where('file_id', file.id)
@@ -64,16 +59,11 @@ export default class MirrorFileJob extends Job {
       .first()
 
     if (existingMirror?.status === 'done') {
-      logger.info(logCtx, 'Mirror already exists, skipping')
       return
     }
 
     const { config, maxFileSize } = await this.getMirrorConfig(service)
     if (maxFileSize > 0 && file.size > maxFileSize) {
-      logger.info(
-        { ...logCtx, size: file.size, maxSize: maxFileSize },
-        'File exceeds max size, skipping'
-      )
       return
     }
 
@@ -89,7 +79,6 @@ export default class MirrorFileJob extends Job {
     await fileMirror.merge({ status: 'uploading', attempts: fileMirror.attempts + 1 }).save()
 
     const jobId = `${file.id}-${service}-${Date.now()}`
-    logger.info({ ...logCtx, jobId }, 'Calling worker for upload')
 
     try {
       const result = await this.callWorker(jobId, file, service, config)
@@ -137,8 +126,6 @@ export default class MirrorFileJob extends Job {
     service: string,
     fileId: string
   ): Promise<void> {
-    logger.info({ jobId, success: result.success }, 'Worker response received')
-
     if (result.success) {
       await fileMirror
         .merge({
@@ -148,7 +135,6 @@ export default class MirrorFileJob extends Job {
           expiresAt: result.expiresAt ? DateTime.fromISO(result.expiresAt) : null,
         })
         .save()
-      logger.info({ fileId, service }, 'Mirror completed')
     } else {
       await fileMirror
         .merge({
@@ -156,7 +142,7 @@ export default class MirrorFileJob extends Job {
           metadata: { error: result.error, ...result.metadata },
         })
         .save()
-      logger.error({ fileId, service, error: result.error }, 'Mirror failed')
+      logger.error({ fileId, service, error: result.error }, 'Mirror upload failed')
     }
   }
 
@@ -166,7 +152,7 @@ export default class MirrorFileJob extends Job {
     logCtx: Record<string, unknown>,
     jobId: string
   ): Promise<void> {
-    logger.error({ ...logCtx, jobId, error: errorMessage }, 'Worker call failed')
+    logger.error({ ...logCtx, jobId, error: errorMessage }, 'Mirror worker call failed')
 
     await fileMirror
       .merge({
@@ -189,7 +175,6 @@ export default class MirrorFileJob extends Job {
     const newStatus = allDone ? 'completed' : file.status !== 'completed' ? 'failed' : null
     if (newStatus) {
       await file.merge({ status: newStatus }).save()
-      logger.info({ fileId, status: newStatus }, 'File status updated')
     }
   }
 
@@ -206,15 +191,11 @@ export default class MirrorFileJob extends Job {
     const config = mirror?.config || {}
     const maxFileSize = typeof config.maxFileSize === 'number' ? config.maxFileSize : 0
 
-    logger.info({ service, config, maxFileSize }, 'Mirror config retrieved')
     return { config, maxFileSize }
   }
 
   async rescue(payload: MirrorFileJobPayload) {
     const { fileId } = payload
-    const logCtx = { fileId, job: 'rescue' }
-
-    logger.error(logCtx, 'Mirror job failed - rescuing')
 
     const file = await File.find(fileId)
     if (file) {
@@ -226,6 +207,6 @@ export default class MirrorFileJob extends Job {
       .whereNot('status', 'done')
       .update({ status: 'failed' })
 
-    logger.error(logCtx, 'Rescue completed')
+    logger.error({ fileId }, 'Mirror job rescued - marked as failed')
   }
 }
