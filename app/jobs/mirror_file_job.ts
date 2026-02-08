@@ -1,6 +1,6 @@
 import { DateTime } from 'luxon'
 import { Job } from '@rlanz/bull-queue'
-import File from '#models/file'
+import File, { type FileStatus } from '#models/file'
 import FileMirror from '#models/file_mirror'
 import Mirror from '#models/mirror'
 import logger from '@adonisjs/core/services/logger'
@@ -13,9 +13,6 @@ interface MirrorFileJobPayload {
 }
 
 interface MirrorUploadResult {
-  jobId: string
-  fileId: string
-  service: string
   success: boolean
   downloadUrl?: string
   error?: string
@@ -82,7 +79,7 @@ export default class MirrorFileJob extends Job {
 
     try {
       const result = await this.callWorker(jobId, file, service, config)
-      await this.handleWorkerResult(fileMirror, result, jobId, service)
+      await this.handleWorkerResult(fileMirror, result, service, file.id)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       await this.handleWorkerError(fileMirror, errorMessage, logCtx, jobId)
@@ -171,10 +168,16 @@ export default class MirrorFileJob extends Job {
     const file = await File.find(fileId)
     if (!file) return
 
-    const newStatus = allDone ? 'completed' : file.status !== 'completed' ? 'failed' : null
+    const newStatus = this.calculateFileStatus(allDone, anyFailed, file.status)
     if (newStatus) {
       await file.merge({ status: newStatus }).save()
     }
+  }
+
+  private calculateFileStatus(allDone: boolean, anyFailed: boolean, currentStatus: FileStatus): FileStatus | null {
+    if (allDone) return 'completed'
+    if (anyFailed && currentStatus !== 'completed') return 'failed'
+    return null
   }
 
   private async getMirrorsList(): Promise<string[]> {
