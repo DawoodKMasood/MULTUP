@@ -171,18 +171,17 @@ export default class MirrorFileJob extends Job {
     return mirrors.map((mirror) => mirror.name)
   }
 
-  private async getServiceConfig(service: string): Promise<Record<string, string>> {
+  private async getServiceConfig(service: string): Promise<Record<string, unknown>> {
     const mirror = await Mirror.query()
       .where('name', service)
       .where('enabled', true)
       .first()
 
+    logger.info(`Mirror config for ${service}:`, mirror?.config)
+
     if (mirror?.config) {
-      const config = Object.entries(mirror.config).reduce((acc, [key, value]) => {
-        acc[key] = String(value)
-        return acc
-      }, {} as Record<string, string>)
-      return config
+      logger.info(`Service config being sent to worker for ${service}:`, mirror.config)
+      return mirror.config as Record<string, unknown>
     }
 
     return {}
