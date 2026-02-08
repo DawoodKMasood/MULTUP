@@ -22,6 +22,9 @@ export default class FileMirror extends BaseModel {
   declare url: string | null
 
   @column()
+  declare metadata: Record<string, unknown> | null
+
+  @column()
   declare attempts: number
 
   @column.dateTime({ autoCreate: true })
