@@ -1,3 +1,4 @@
+import { DateTime } from 'luxon'
 import { Job } from '@rlanz/bull-queue'
 import File from '#models/file'
 import FileMirror from '#models/file_mirror'
@@ -19,6 +20,7 @@ interface MirrorUploadResult {
   downloadUrl?: string
   error?: string
   metadata?: Record<string, unknown>
+  expiresAt?: string | null
 }
 
 export default class MirrorFileJob extends Job {
@@ -104,10 +106,15 @@ export default class MirrorFileJob extends Job {
       logger.info(`Worker response for job ${jobId}: ${result.success ? 'success' : 'failure'}`)
 
       if (result.success) {
+        const expiresAt = result.expiresAt
+          ? DateTime.fromISO(result.expiresAt)
+          : null
+
         await fileMirror.merge({
           status: 'done',
           url: result.downloadUrl || null,
           metadata: result.metadata || null,
+          expiresAt,
         }).save()
         logger.info(`Mirror ${mirrorService} completed for file ${file.id}`)
       } else {
@@ -165,10 +172,11 @@ export default class MirrorFileJob extends Job {
       .first()
 
     if (mirror?.config) {
-      return Object.entries(mirror.config).reduce((acc, [key, value]) => {
+      const config = Object.entries(mirror.config).reduce((acc, [key, value]) => {
         acc[key] = String(value)
         return acc
       }, {} as Record<string, string>)
+      return config
     }
 
     return {}

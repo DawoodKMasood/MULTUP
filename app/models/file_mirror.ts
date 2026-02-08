@@ -27,6 +27,9 @@ export default class FileMirror extends BaseModel {
   @column()
   declare attempts: number
 
+  @column.dateTime({ columnName: 'expires_at' })
+  declare expiresAt: DateTime | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 

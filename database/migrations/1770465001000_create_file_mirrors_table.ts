@@ -11,6 +11,7 @@ export default class extends BaseSchema {
       table.string('status').notNullable()
       table.string('url').nullable()
       table.jsonb('metadata').nullable()
+      table.timestamp('expires_at').nullable()
       table.integer('attempts').notNullable().defaultTo(0)
       table.timestamp('created_at').notNullable()
       table.timestamp('updated_at').nullable()
