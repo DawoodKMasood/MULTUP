@@ -6,6 +6,7 @@ import drive from '@adonisjs/drive/services/main'
 import logger from '@adonisjs/core/services/logger'
 import queue from '@rlanz/bull-queue/services/main'
 import MirrorFileJob from '#jobs/mirror_file_job'
+import uploadConfig from '#config/upload'
 
 export default class UploadsController {
     async store({ request, response }: HttpContext) {
@@ -32,9 +33,24 @@ export default class UploadsController {
         if (!file.tmpPath) {
             return response.badRequest({ error: 'File is not uploaded' })
         }
-        
-        const id = cuid();
-        const ext = file.extname?.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'bin'
+
+        const mimeType = file.headers['content-type'] || 'application/octet-stream'
+        const isAllowedType = uploadConfig.allowedMimeTypes.some(allowed =>
+            mimeType.toLowerCase().startsWith(allowed.toLowerCase())
+        )
+        if (!isAllowedType) {
+            return response.badRequest({
+                error: 'File type not allowed',
+                mimeType
+            })
+        }
+
+        const id = cuid()
+        const ext = file.extname ? file.extname.replace(/^\./, '').toLowerCase() : 'bin'
+        const validExtPattern = /^[a-z0-9]+$/
+        if (!validExtPattern.test(ext)) {
+            return response.badRequest({ error: 'Invalid file extension' })
+        }
         const key = `uploads/${id}.${ext}`
 
         const trx = await db.transaction()
@@ -46,12 +62,17 @@ export default class UploadsController {
                 filename: file.clientName,
                 size: file.size,
                 status: 'pending',
+                mimeType,
                 path: key,
             }, { client: trx })
 
             await trx.commit()
 
-            queue.dispatch(MirrorFileJob, { fileId: fileRecord.id })
+            try {
+                await queue.dispatch(MirrorFileJob, { fileId: fileRecord.id })
+            } catch (queueError) {
+                logger.error({ fileId: fileRecord.id, error: queueError }, 'Queue dispatch failed')
+            }
 
             return response.json(
                 {

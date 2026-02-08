@@ -19,6 +19,9 @@ export default class File extends BaseModel {
   declare status: FileStatus
 
   @column()
+  declare mimeType: string | null
+
+  @column()
   declare path: string
 
   @column.dateTime({ autoCreate: true })

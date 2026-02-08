@@ -25,7 +25,36 @@ interface MirrorConfig {
   maxFileSize: number
 }
 
+async function pAll<T>(tasks: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
+  const results: T[] = []
+  const executing: Promise<void>[] = []
+  let index = 0
+
+  for (const task of tasks) {
+    const p = task().then((result) => {
+      results[index++] = result
+    })
+    executing.push(p)
+
+    if (executing.length >= concurrency) {
+      await Promise.race(executing)
+      executing.splice(executing.findIndex((x) => x === p), 1)
+    }
+  }
+
+  await Promise.all(executing)
+  return results
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export default class MirrorFileJob extends Job {
+  private readonly MAX_RETRIES = 3
+  private readonly RETRY_BASE_DELAY_MS = 1000
+  private readonly FETCH_TIMEOUT_MS = 30000
+  private readonly CONCURRENCY_LIMIT = 5
   static get $$filepath() {
     return import.meta.url
   }
@@ -42,7 +71,8 @@ export default class MirrorFileJob extends Job {
     await file.merge({ status: 'processing' }).save()
 
     const mirrorsToProcess = mirror ? [mirror] : await this.getMirrorsList()
-    await Promise.all(mirrorsToProcess.map((m) => this.processMirror(file, m)))
+    const tasks = mirrorsToProcess.map((m) => () => this.processMirror(file, m))
+    await pAll(tasks, this.CONCURRENCY_LIMIT)
 
     await this.updateFileStatus(fileId)
   }
@@ -77,12 +107,29 @@ export default class MirrorFileJob extends Job {
 
     const jobId = `${file.id}-${service}-${Date.now()}`
 
-    try {
-      const result = await this.callWorker(jobId, file, service, config)
-      await this.handleWorkerResult(fileMirror, result, service, file.id)
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      await this.handleWorkerError(fileMirror, errorMessage, logCtx, jobId)
+    let lastError: string | null = null
+    for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) {
+          const delay = this.RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1)
+          logger.info({ fileId: file.id, service, attempt, delay }, 'Retrying mirror upload')
+          await sleep(delay)
+          await fileMirror.merge({ attempts: fileMirror.attempts + 1 }).save()
+        }
+        const result = await this.callWorker(jobId, file, service, config)
+        await this.handleWorkerResult(fileMirror, result, service, file.id)
+        return
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : 'Unknown error'
+        logger.warn({ fileId: file.id, service, attempt, error: lastError }, 'Mirror upload attempt failed')
+        if (fileMirror.attempts >= this.MAX_RETRIES) {
+          break
+        }
+      }
+    }
+
+    if (lastError) {
+      await this.handleWorkerError(fileMirror, lastError, logCtx, jobId)
     }
   }
 
@@ -95,25 +142,39 @@ export default class MirrorFileJob extends Job {
     const signedUrl = await drive.use().getSignedUrl(file.path, { expiresIn: '10m' })
     const workerUrl = env.get('MIRROR_WORKER_URL')
 
-    const response = await fetch(`${workerUrl}/mirror`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jobId,
-        fileId: file.id,
-        fileUrl: signedUrl,
-        filename: file.filename,
-        size: file.size,
-        service,
-        serviceConfig: config,
-      }),
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), this.FETCH_TIMEOUT_MS)
 
-    if (!response.ok) {
-      throw new Error(`Worker returned ${response.status}: ${await response.text()}`)
+    try {
+      const response = await fetch(`${workerUrl}/mirror`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId,
+          fileId: file.id,
+          fileUrl: signedUrl,
+          filename: file.filename,
+          size: file.size,
+          service,
+          serviceConfig: config,
+        }),
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        throw new Error(`Worker returned ${response.status}: ${await response.text()}`)
+      }
+
+      return (await response.json()) as MirrorUploadResult
+    } catch (error) {
+      clearTimeout(timeoutId)
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`Request timed out after ${this.FETCH_TIMEOUT_MS}ms`)
+      }
+      throw error
     }
-
-    return (await response.json()) as MirrorUploadResult
   }
 
   private async handleWorkerResult(
@@ -162,21 +223,23 @@ export default class MirrorFileJob extends Job {
     const mirrors = await FileMirror.query().where('file_id', fileId)
     const allDone = mirrors.every((m) => m.status === 'done')
     const anyFailed = mirrors.some((m) => m.status === 'failed')
+    const hasSomeDone = mirrors.some((m) => m.status === 'done')
 
     if (!allDone && !anyFailed) return
 
     const file = await File.find(fileId)
     if (!file) return
 
-    const newStatus = this.calculateFileStatus(allDone, anyFailed, file.status)
+    const newStatus = this.calculateFileStatus(allDone, anyFailed, file.status, hasSomeDone)
     if (newStatus) {
       await file.merge({ status: newStatus }).save()
     }
   }
 
-  private calculateFileStatus(allDone: boolean, anyFailed: boolean, currentStatus: FileStatus): FileStatus | null {
+  private calculateFileStatus(allDone: boolean, anyFailed: boolean, _currentStatus: FileStatus, hasSomeDone: boolean): FileStatus | null {
     if (allDone) return 'completed'
-    if (anyFailed && currentStatus !== 'completed') return 'failed'
+    if (anyFailed && !hasSomeDone) return 'failed'
+    if (hasSomeDone && anyFailed) return 'completed'
     return null
   }
 
