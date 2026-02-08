@@ -4,8 +4,20 @@ import File, { type FileStatus } from '#models/file'
 import FileMirror from '#models/file_mirror'
 import Mirror from '#models/mirror'
 import logger from '@adonisjs/core/services/logger'
-import drive from '@adonisjs/drive/services/main'
 import env from '#start/env'
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+
+const s3Client = new S3Client({
+  region: env.get('AWS_REGION'),
+  endpoint: env.get('AWS_ENDPOINT'),
+  credentials: {
+    accessKeyId: env.get('AWS_ACCESS_KEY_ID'),
+    secretAccessKey: env.get('AWS_SECRET_ACCESS_KEY'),
+  },
+})
+
+const BUCKET = env.get('S3_BUCKET')
 
 interface MirrorFileJobPayload {
   fileId: string
@@ -139,7 +151,11 @@ export default class MirrorFileJob extends Job {
     service: string,
     config: Record<string, unknown>
   ): Promise<MirrorUploadResult> {
-    const signedUrl = await drive.use().getSignedUrl(file.path, { expiresIn: '10m' })
+    const command = new GetObjectCommand({
+      Bucket: BUCKET,
+      Key: file.path,
+    })
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 600 })
     const workerUrl = env.get('MIRROR_WORKER_URL')
 
     const controller = new AbortController()

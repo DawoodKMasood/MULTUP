@@ -2,11 +2,24 @@ import { cuid } from '@adonisjs/core/helpers'
 import type { HttpContext } from '@adonisjs/core/http'
 import File from '#models/file'
 import db from '@adonisjs/lucid/services/db'
-import drive from '@adonisjs/drive/services/main'
 import logger from '@adonisjs/core/services/logger'
 import queue from '@rlanz/bull-queue/services/main'
 import MirrorFileJob from '#jobs/mirror_file_job'
 import uploadConfig from '#config/upload'
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { createReadStream } from 'node:fs'
+import env from '#start/env'
+
+const s3Client = new S3Client({
+  region: env.get('AWS_REGION'),
+  endpoint: env.get('AWS_ENDPOINT'),
+  credentials: {
+    accessKeyId: env.get('AWS_ACCESS_KEY_ID'),
+    secretAccessKey: env.get('AWS_SECRET_ACCESS_KEY'),
+  },
+})
+
+const BUCKET = env.get('S3_BUCKET')
 
 export default class UploadsController {
     async store({ request, response }: HttpContext) {
@@ -56,7 +69,13 @@ export default class UploadsController {
         const trx = await db.transaction()
 
         try {
-            await file.moveToDisk(key)
+            const fileStream = createReadStream(file.tmpPath!)
+            await s3Client.send(new PutObjectCommand({
+              Bucket: BUCKET,
+              Key: key,
+              Body: fileStream,
+              ContentType: mimeType,
+            }))
             
             const fileRecord = await File.create({
                 filename: file.clientName,
@@ -86,7 +105,10 @@ export default class UploadsController {
             await trx.rollback()
             
             try {
-                await drive.use().delete(key)
+                await s3Client.send(new DeleteObjectCommand({
+                  Bucket: BUCKET,
+                  Key: key,
+                }))
             } catch (cleanupError) {
                 logger.error('S3 cleanup failed in uploads_controller (store):', cleanupError)
             }
