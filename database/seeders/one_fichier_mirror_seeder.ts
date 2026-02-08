@@ -10,6 +10,7 @@ export default class OneFichierMirrorSeeder extends BaseSeeder {
         config: {
           apiKey: null,
           retentionDays: 15,
+          maxFileSize: 100000000,
         },
         enabled: true,
         priority: 0,

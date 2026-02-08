@@ -65,6 +65,12 @@ export default class MirrorFileJob extends Job {
       return
     }
 
+    const maxFileSize = await this.getMaxFileSize(mirrorService)
+    if (maxFileSize > 0 && file.size > maxFileSize) {
+      logger.info(`File ${file.id} size ${file.size} exceeds max ${maxFileSize} for ${mirrorService}, skipping`)
+      return
+    }
+
     const fileMirror =
       existingMirror ||
       (await FileMirror.create({
@@ -180,6 +186,19 @@ export default class MirrorFileJob extends Job {
     }
 
     return {}
+  }
+
+  private async getMaxFileSize(service: string): Promise<number> {
+    const mirror = await Mirror.query()
+      .where('name', service)
+      .where('enabled', true)
+      .first()
+
+    if (mirror?.config && typeof mirror.config.maxFileSize === 'number') {
+      return mirror.config.maxFileSize
+    }
+
+    return 0
   }
 
   async rescue(payload: MirrorFileJobPayload) {
