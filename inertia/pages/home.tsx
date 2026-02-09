@@ -128,9 +128,6 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          filename: presignData.filename,
-          size: presignData.size,
-          mimeType: presignData.mimeType,
           key: presignData.key,
         }),
       })
