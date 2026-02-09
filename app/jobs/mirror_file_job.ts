@@ -145,7 +145,7 @@ export default class MirrorFileJob extends Job {
       Bucket: BUCKET,
       Key: file.path,
     })
-    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 600 })
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 })
     const workerUrl = env.get('MIRROR_WORKER_URL')
 
     const controller = new AbortController()
