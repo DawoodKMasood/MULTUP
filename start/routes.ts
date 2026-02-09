@@ -15,6 +15,7 @@ router.on('/').renderInertia('home')
 
 router.group(() => {
   router.group(() => {
-    router.post('/upload', [UploadsController, 'store'])
+    router.post('/uploads/presign', [UploadsController, 'generatePresignedUrl'])
+    router.post('/uploads/complete', [UploadsController, 'completeUpload'])
   }).prefix('v1')
 }).prefix('api')

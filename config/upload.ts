@@ -10,7 +10,7 @@ const uploadConfig = {
   /**
    * Allowed MIME type prefixes for uploads
    */
-  allowedMimeTypes: ['image/', 'video/', 'application/pdf', 'application/zip', 'application/x-zip-compressed', 'application/x-zip'],
+  allowedMimeTypes: ['image/', 'video/', 'application/pdf', 'application/zip', 'application/x-zip-compressed', 'application/x-zip', 'text/'],
 
   /**
    * Upload timeout in milliseconds
