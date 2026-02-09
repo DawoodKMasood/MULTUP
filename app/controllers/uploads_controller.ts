@@ -27,10 +27,32 @@ interface UploadMetadata {
   size: number
   mimeType: string
   id: string
+  fingerprint: string | null
+}
+
+function buildS3Metadata(
+  filename: string,
+  size: number,
+  mimeType: string,
+  id: string,
+  fingerprint: string | null
+): Record<string, string> {
+  const metadata: Record<string, string> = {
+    'x-amz-meta-filename': filename,
+    'x-amz-meta-declared-size': String(size),
+    'x-amz-meta-declared-mimetype': mimeType,
+    'x-amz-meta-upload-id': id,
+  }
+
+  if (fingerprint) {
+    metadata['x-amz-meta-fingerprint'] = fingerprint
+  }
+
+  return metadata
 }
 
 function validatePresignRequest(body: Record<string, unknown>): ValidationResult {
-  const { filename, size, mimeType } = body
+  const { filename, size, mimeType, fingerprint } = body
 
   const filenameValidation = validateRequiredString(filename, 'Filename')
   if (!filenameValidation.valid) return filenameValidation
@@ -52,6 +74,10 @@ function validatePresignRequest(body: Record<string, unknown>): ValidationResult
     return failure(`File extension '.${ext}' does not match MIME type '${finalMimeType}'`)
   }
 
+  if (fingerprint && typeof fingerprint === 'string' && fingerprint.length < 10) {
+    return failure('Invalid fingerprint format')
+  }
+
   return { valid: true }
 }
 
@@ -60,6 +86,7 @@ function extractAndValidateMetadata(metadata: Record<string, string>): Validatio
   const sizeStr = metadata['x-amz-meta-declared-size']
   const mimeType = metadata['x-amz-meta-declared-mimetype']
   const id = metadata['x-amz-meta-upload-id']
+  const fingerprint = metadata['x-amz-meta-fingerprint'] || null
 
   if (!filename || !sizeStr || !mimeType || !id) {
     return failure('Invalid upload: metadata missing')
@@ -70,7 +97,7 @@ function extractAndValidateMetadata(metadata: Record<string, string>): Validatio
     return failure('Invalid approved size in metadata')
   }
 
-  return { filename, size, mimeType, id }
+  return { filename, size, mimeType, id, fingerprint }
 }
 
 function isValidS3Key(key: unknown): key is string {
@@ -84,24 +111,30 @@ export default class UploadsController {
       return response.badRequest(validation.error)
     }
 
-    const { filename, mimeType, size } = request.body()
+    const { filename, mimeType, size, fingerprint } = request.body()
     const finalMimeType = (mimeType as string || 'application/octet-stream').toLowerCase()
     const ext = getFileExtension(filename as string)
     const id = cuid()
     const key = `uploads/${id}.${ext}`
     const sanitizedFilename = sanitizeMetadata(filename as string)
+    const sanitizedFingerprint = fingerprint && typeof fingerprint === 'string'
+      ? sanitizeMetadata(fingerprint)
+      : null
 
     try {
+      const metadata = buildS3Metadata(
+        sanitizedFilename,
+        size as number,
+        finalMimeType,
+        id,
+        sanitizedFingerprint
+      )
+
       const command = new PutObjectCommand({
         Bucket: BUCKET,
         Key: key,
         ContentType: finalMimeType,
-        Metadata: {
-          'x-amz-meta-filename': sanitizedFilename,
-          'x-amz-meta-declared-size': String(size),
-          'x-amz-meta-declared-mimetype': finalMimeType,
-          'x-amz-meta-upload-id': id,
-        },
+        Metadata: metadata,
       })
 
       const url = await getSignedUrl(s3Client, command, { expiresIn: PRESIGNED_URL_EXPIRY_SECONDS })
@@ -182,6 +215,7 @@ export default class UploadsController {
         status: 'pending',
         mimeType: actualMimeType,
         path: key,
+        fingerprint: approved.fingerprint,
       })
 
       try {

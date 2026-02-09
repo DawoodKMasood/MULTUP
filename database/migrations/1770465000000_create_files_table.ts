@@ -11,6 +11,7 @@ export default class extends BaseSchema {
       table.bigInteger('size').notNullable()
       table.string('status').notNullable()
       table.string('mime_type').nullable()
+      table.string('fingerprint').nullable()
       table.timestamp('created_at').notNullable()
       table.timestamp('updated_at').nullable()
     })

@@ -24,6 +24,9 @@ export default class File extends BaseModel {
   @column()
   declare path: string
 
+  @column()
+  declare fingerprint: string | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
