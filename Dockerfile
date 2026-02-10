@@ -13,7 +13,7 @@ COPY package*.json ./
 
 # Install ALL dependencies (including devDependencies) for build
 # Unset NODE_ENV to ensure devDependencies are installed
-RUN NODE_ENV=development npm ci
+RUN NODE_ENV=development npm install
 
 # Copy source code
 COPY . .
