@@ -6,7 +6,7 @@ services:
       context: .
       target: production
     ports:
-      - "80:3333"
+      - "3333:3333"
     environment:
       - NODE_ENV=production
     env_file:
