@@ -10,7 +10,7 @@ const dbConfig = defineConfig({
       client: 'pg',
       connection: {
         connectionString: env.get('DATABASE_URL'),
-        ssl: isProduction ? { rejectUnauthorized: true } : false,
+        ssl: isProduction ? { rejectUnauthorized: false } : false,
       },
       migrations: {
         naturalSort: true,
