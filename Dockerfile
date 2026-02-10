@@ -3,9 +3,15 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
 # Copy package files
 COPY package*.json ./
-RUN npm ci
+
+# Install ALL dependencies (including devDependencies) for build
+# Using --include=dev to ensure devDependencies are installed regardless of NODE_ENV
+RUN npm ci --include=dev
 
 # Copy source code
 COPY . .
@@ -21,15 +27,17 @@ WORKDIR /app
 # Install PM2 globally
 RUN npm install -g pm2
 
-# Copy built application
+# Copy built application from builder
 COPY --from=builder /app/build .
-COPY --from=builder /app/ecosystem.config.cjs .
 
-# Install production dependencies
-RUN npm ci --production
+# Copy package files for production install
+COPY --from=builder /app/package*.json ./
+
+# Install only production dependencies
+RUN npm ci --production && npm cache clean --force
 
 # Expose port
 EXPOSE 3333
 
 # Start with PM2
-CMD ["pm2-runtime", "ecosystem.config.cjs"]
+CMD ["pm2-runtime", "start", "ecosystem.config.cjs"]
