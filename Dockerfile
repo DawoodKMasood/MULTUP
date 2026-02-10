@@ -35,6 +35,9 @@ COPY --from=builder /app/build .
 # Copy package files for production install
 COPY --from=builder /app/package*.json ./
 
+# Copy PM2 ecosystem config
+COPY --from=builder /app/ecosystem.config.cjs ./
+
 # Install only production dependencies
 RUN npm ci --production && npm cache clean --force
 
