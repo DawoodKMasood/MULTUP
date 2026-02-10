@@ -86,16 +86,40 @@ async function getPresignedUrl(file: ActualFileObject, fingerprint: string): Pro
     return response.json();
 }
 
-async function uploadToS3(url: string, file: ActualFileObject): Promise<void> {
-    const response = await fetch(url, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type },
-    });
+async function uploadToS3(
+    url: string,
+    file: ActualFileObject,
+    onProgress: (loaded: number, total: number) => void
+): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
 
-    if (!response.ok) {
-        throw new Error('Failed to upload file to S3');
-    }
+        xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+                onProgress(event.loaded, event.total);
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve();
+            } else {
+                reject(new Error('Failed to upload file to S3'));
+            }
+        });
+
+        xhr.addEventListener('error', () => {
+            reject(new Error('Network error during upload'));
+        });
+
+        xhr.addEventListener('abort', () => {
+            reject(new Error('Upload aborted'));
+        });
+
+        xhr.open('PUT', url);
+        xhr.setRequestHeader('Content-Type', file.type);
+        xhr.send(file);
+    });
 }
 
 async function completeUpload(key: string): Promise<CompleteResponse> {
@@ -115,10 +139,11 @@ async function completeUpload(key: string): Promise<CompleteResponse> {
 
 async function processFileUpload(
     file: ActualFileObject,
-    fingerprint: string
+    fingerprint: string,
+    onProgress: (loaded: number, total: number) => void
 ): Promise<CompleteResponse> {
     const presignData = await getPresignedUrl(file, fingerprint);
-    await uploadToS3(presignData.url, file);
+    await uploadToS3(presignData.url, file, onProgress);
     return completeUpload(presignData.key);
 }
 
@@ -176,9 +201,7 @@ const FileUpload = () => {
         const filesToUpload = pond.getFiles().filter((f) => f.status === FileStatus.IDLE);
         totalFilesRef.current = filesToUpload.length;
 
-        for (const file of filesToUpload) {
-            await pond.processFile(file);
-        }
+        await Promise.all(filesToUpload.map((file) => pond.processFile(file)));
 
         setIsUploading(false);
     }, []);
@@ -190,11 +213,13 @@ const FileUpload = () => {
             _metadata: Record<string, string>,
             load: (p: string | { abort: () => void }) => void,
             error: (message: string) => void,
-            _progress: (computable: boolean, loaded: number, total: number) => void,
+            progress: (computable: boolean, loaded: number, total: number) => void,
             abort: () => void
         ) => {
             try {
-                const result = await processFileUpload(file, visitorId);
+                const result = await processFileUpload(file, visitorId, (loaded, total) => {
+                    progress(true, loaded, total);
+                });
                 load(JSON.stringify(result));
             } catch (err: unknown) {
                 error(err instanceof Error ? err.message : 'Upload failed');
