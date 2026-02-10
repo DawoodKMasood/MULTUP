@@ -129,10 +129,12 @@ function compressUploadData(results: UploadResult[]): string {
 
 const FileUpload = () => {
     const [files, setFiles] = useState<FilePondFile[]>([]);
-    const [uploadResults, setUploadResults] = useState<UploadResult[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [visitorId, setVisitorId] = useState<string>('');
     const pondRef = useRef<FilePond>(null);
+    const uploadResultsRef = useRef<UploadResult[]>([]);
+    const processedCountRef = useRef<number>(0);
+    const totalFilesRef = useRef<number>(0);
 
     useEffect(() => {
         const getFingerprint = async () => {
@@ -143,35 +145,43 @@ const FileUpload = () => {
         getFingerprint();
     }, []);
 
-    const handleProcessFile = useCallback((error: FilePondErrorDescription | null, file: FilePondFile) => {
-        if (error || !file.serverId) return;
-
-        const result = JSON.parse(file.serverId);
-        setUploadResults((prev) => [...prev, { id: result.id, filename: result.filename }]);
+    const checkAllComplete = useCallback(() => {
+        if (processedCountRef.current === totalFilesRef.current && totalFilesRef.current > 0) {
+            if (uploadResultsRef.current.length > 0) {
+                const compressed = compressUploadData(uploadResultsRef.current);
+                window.location.href = `${window.location.origin}/upload_complete?data=${compressed}`;
+            }
+        }
     }, []);
+
+    const handleProcessFile = useCallback((error: FilePondErrorDescription | null, file: FilePondFile) => {
+        processedCountRef.current++;
+
+        if (!error && file.serverId) {
+            const result = JSON.parse(file.serverId);
+            uploadResultsRef.current.push({ id: result.id, filename: result.filename });
+        }
+
+        checkAllComplete();
+    }, [checkAllComplete]);
 
     const handleUploadAll = useCallback(async () => {
         if (!pondRef.current) return;
 
         setIsUploading(true);
-        setUploadResults([]);
+        uploadResultsRef.current = [];
+        processedCountRef.current = 0;
 
         const pond = pondRef.current;
         const filesToUpload = pond.getFiles().filter((f) => f.status === FileStatus.IDLE);
+        totalFilesRef.current = filesToUpload.length;
 
         for (const file of filesToUpload) {
-            await pond.processFile(file).catch(() => {});
+            await pond.processFile(file);
         }
 
         setIsUploading(false);
     }, []);
-
-    const redirectToCompletePage = useCallback(() => {
-        if (uploadResults.length === 0) return;
-
-        const compressed = compressUploadData(uploadResults);
-        window.location.href = `${window.location.origin}/upload_complete?data=${compressed}`;
-    }, [uploadResults]);
 
     const serverConfig = {
         process: (async (
@@ -194,22 +204,10 @@ const FileUpload = () => {
         }) as ProcessServerConfigFunction,
     };
 
-    const allFilesDone = files.length > 0 && files.every((f) =>
-        f.status !== FileStatus.IDLE &&
-        f.status !== FileStatus.LOADING &&
-        f.status !== FileStatus.PROCESSING
-    );
-
-    useEffect(() => {
-        if (allFilesDone && uploadResults.length > 0) {
-            redirectToCompletePage();
-        }
-    }, [allFilesDone, uploadResults, redirectToCompletePage]);
-
     const hasFiles = files.length > 0;
 
     return (
-        <div className='max-w-6xl mx-auto py-5'>
+        <div className='max-w-6xl mx-auto py-4 px-4'>
             <FilePond
                 ref={pondRef}
                 files={files as unknown as (ActualFileObject | Blob | string)[]}
