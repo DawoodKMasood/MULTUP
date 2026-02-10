@@ -1,0 +1,15 @@
+[Unit]
+Description=Multup Queue Worker
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/multup
+ExecStart=/usr/bin/node ace queue:listen
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
