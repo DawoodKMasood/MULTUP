@@ -9,18 +9,23 @@ export default defineConfig({
   plugins: [
     inertia({ ssr: { enabled: true, entrypoint: 'inertia/app/ssr.tsx' } }),
     react(),
-    adonisjs({ entrypoints: ['inertia/app/app.tsx'], reload: ['resources/views/**/*.edge'] }),
+    adonisjs({
+      entrypoints: ['inertia/app/app.tsx'],
+      reload: ['resources/views/**/*.edge'],
+    }),
     tailwindcss(),
   ],
 
-  /**
-   * Define aliases for importing modules from
-   * your frontend code
-   */
   resolve: {
     alias: {
       '~/': `${getDirname(import.meta.url)}/inertia/`,
       '@/': `${getDirname(import.meta.url)}/inertia/`,
     },
+  },
+
+  build: {
+    manifest: true,
+    outDir: 'public/assets',
+    emptyOutDir: true,
   },
 })
