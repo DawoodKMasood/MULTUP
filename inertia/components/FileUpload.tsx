@@ -66,10 +66,26 @@ const PRESIGN_URL = '/api/v1/uploads/presign';
 const COMPLETE_URL = '/api/v1/uploads/complete';
 const MAX_FILES = 10;
 
+function getXsrfToken(): string | null {
+    if (typeof document === 'undefined') return null;
+    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
+function buildJsonHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = getXsrfToken();
+    if (token) {
+        headers['X-XSRF-TOKEN'] = token;
+    }
+    return headers;
+}
+
 async function getPresignedUrl(file: ActualFileObject, fingerprint: string): Promise<PresignResponse> {
     const response = await fetch(PRESIGN_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildJsonHeaders(),
+        credentials: 'same-origin',
         body: JSON.stringify({
             filename: file.name,
             size: file.size,
@@ -125,7 +141,8 @@ async function uploadToS3(
 async function completeUpload(key: string): Promise<CompleteResponse> {
     const response = await fetch(COMPLETE_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: buildJsonHeaders(),
+        credentials: 'same-origin',
         body: JSON.stringify({ key }),
     });
 
