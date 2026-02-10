@@ -32,6 +32,9 @@ RUN npm install -g pm2
 # Copy built application from builder
 COPY --from=builder /app/build ./build
 
+# Copy Vite build assets
+COPY --from=builder /app/public/assets ./public/assets
+
 # Copy package files for production install
 COPY --from=builder /app/package*.json ./
 
