@@ -234,6 +234,7 @@ const FileUpload = () => {
     return (
         <div className='max-w-6xl mx-auto py-4 px-4'>
             <FilePond
+                maxParallelUploads={5}
                 ref={pondRef}
                 files={files as unknown as (ActualFileObject | Blob | string)[]}
                 onupdatefiles={setFiles}
