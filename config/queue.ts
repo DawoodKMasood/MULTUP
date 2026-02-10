@@ -3,10 +3,7 @@ import { defineConfig } from '@rlanz/bull-queue'
 
 export default defineConfig({
   defaultConnection: {
-    host: env.get('QUEUE_REDIS_HOST'),
-    port: env.get('QUEUE_REDIS_PORT'),
-    username: env.get('QUEUE_REDIS_USERNAME'),
-    password: env.get('QUEUE_REDIS_PASSWORD'),
+    url: env.get('QUEUE_REDIS_URL'),
     tls: {},
   },
 

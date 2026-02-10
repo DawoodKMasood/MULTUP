@@ -7,11 +7,7 @@ const dbConfig = defineConfig({
     postgres: {
       client: 'pg',
       connection: {
-        host: env.get('DB_HOST'),
-        port: env.get('DB_PORT'),
-        user: env.get('DB_USER'),
-        password: env.get('DB_PASSWORD'),
-        database: env.get('DB_DATABASE'),
+        connectionString: env.get('DATABASE_URL'),
         ssl: env.get('NODE_ENV') === 'production' ? { rejectUnauthorized: true } : false,
       },
       migrations: {
