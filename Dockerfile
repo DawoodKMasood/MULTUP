@@ -30,7 +30,7 @@ WORKDIR /app
 RUN npm install -g pm2
 
 # Copy built application from builder
-COPY --from=builder /app/build .
+COPY --from=builder /app/build ./build
 
 # Copy package files for production install
 COPY --from=builder /app/package*.json ./

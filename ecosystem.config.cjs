@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'multup-web',
-      script: './bin/server.js',
+      script: './build/bin/server.js',
       instances: 'max',
       exec_mode: 'cluster',
       env: {
@@ -14,7 +14,7 @@ module.exports = {
     },
     {
       name: 'multup-queue',
-      script: './ace.js',
+      script: './build/ace.js',
       args: 'queue:listen',
       instances: 1,
       exec_mode: 'fork',
