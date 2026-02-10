@@ -10,8 +10,8 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 
 # Install ALL dependencies (including devDependencies) for build
-# Using --include=dev to ensure devDependencies are installed regardless of NODE_ENV
-RUN npm ci --include=dev
+# Unset NODE_ENV to ensure devDependencies are installed
+RUN NODE_ENV=development npm ci
 
 # Copy source code
 COPY . .
