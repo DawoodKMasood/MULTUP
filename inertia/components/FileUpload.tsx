@@ -1,10 +1,51 @@
-import { FilePond } from 'react-filepond';
+import { FilePond, registerPlugin } from 'react-filepond';
 import type { FilePondFile, FilePondErrorDescription, ActualFileObject, ProcessServerConfigFunction } from 'filepond';
 import { FileStatus } from 'filepond';
 import 'filepond/dist/filepond.min.css';
+import FilePondPluginFileValidateType from 'filepond-plugin-file-validate-type';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import LZString from 'lz-string';
+
+registerPlugin(FilePondPluginFileValidateType);
+
+const ACCEPTED_MIME_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml',
+    'video/mp4',
+    'video/webm',
+    'video/quicktime',
+    'application/pdf',
+    'application/zip',
+    'application/x-zip-compressed',
+    'text/plain',
+    'text/markdown',
+    'text/csv',
+    'application/json',
+    'application/octet-stream',
+];
+
+const FILE_TYPE_LABELS: Record<string, string> = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/gif': '.gif',
+    'image/webp': '.webp',
+    'image/svg+xml': '.svg',
+    'video/mp4': '.mp4',
+    'video/webm': '.webm',
+    'video/quicktime': '.mov',
+    'application/pdf': '.pdf',
+    'application/zip': '.zip',
+    'application/x-zip-compressed': '.zip',
+    'text/plain': '.txt',
+    'text/markdown': '.md',
+    'text/csv': '.csv',
+    'application/json': '.json',
+    'application/octet-stream': '.bin',
+};
 
 interface UploadResult {
     id: number;
@@ -153,18 +194,22 @@ const FileUpload = () => {
         }) as ProcessServerConfigFunction,
     };
 
-    const allFilesProcessed = files.length > 0 && files.every((f) => f.status === FileStatus.PROCESSING_COMPLETE);
+    const allFilesDone = files.length > 0 && files.every((f) =>
+        f.status !== FileStatus.IDLE &&
+        f.status !== FileStatus.LOADING &&
+        f.status !== FileStatus.PROCESSING
+    );
 
     useEffect(() => {
-        if (allFilesProcessed && uploadResults.length > 0) {
+        if (allFilesDone && uploadResults.length > 0) {
             redirectToCompletePage();
         }
-    }, [allFilesProcessed, uploadResults, redirectToCompletePage]);
+    }, [allFilesDone, uploadResults, redirectToCompletePage]);
 
     const hasFiles = files.length > 0;
 
     return (
-        <div className='max-w-3xl mx-auto py-5'>
+        <div className='max-w-6xl mx-auto py-5'>
             <FilePond
                 ref={pondRef}
                 files={files as unknown as (ActualFileObject | Blob | string)[]}
@@ -176,7 +221,11 @@ const FileUpload = () => {
                 credits={false}
                 instantUpload={false}
                 allowRevert={false}
+                fileValidateTypeLabelExpectedTypes="File is of invalid type"
+                labelFileTypeNotAllowed="Invalid file extension"
                 labelIdle="Drag and Drop your files or <span class='filepond--label-action'>Browse</span>"
+                acceptedFileTypes={ACCEPTED_MIME_TYPES}
+                fileValidateTypeLabelExpectedTypesMap={FILE_TYPE_LABELS}
             />
             <div className='mt-4 flex gap-4'>
                 <button

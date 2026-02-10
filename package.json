@@ -74,6 +74,7 @@
     "@vinejs/vine": "^3.0.1",
     "edge.js": "^6.2.1",
     "filepond": "^4.32.11",
+    "filepond-plugin-file-validate-type": "^1.2.9",
     "luxon": "^3.7.2",
     "lz-string": "^1.5.0",
     "pg": "^8.18.0",
