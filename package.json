@@ -5,7 +5,9 @@
   "type": "module",
   "license": "UNLICENSED",
   "scripts": {
-    "start": "node build/bin/server.js",
+    "start": "concurrently -k -s first \"npm:start:web\" \"npm:start:worker\"",
+    "start:web": "node build/bin/server.js",
+    "start:worker": "node build/ace.js queue:listen",
     "build": "node ace build && vite build",
     "dev": "node ace serve --hmr",
     "test": "node ace test",
@@ -79,6 +81,7 @@
     "@rlanz/bull-queue": "^3.1.0",
     "@tailwindcss/vite": "^4.1.18",
     "@vinejs/vine": "^3.0.1",
+    "concurrently": "^9.1.0",
     "edge.js": "^6.2.1",
     "filepond": "^4.32.11",
     "filepond-plugin-file-validate-type": "^1.2.9",
