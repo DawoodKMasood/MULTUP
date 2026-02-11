@@ -6,6 +6,7 @@ import FilePondPluginFileValidateType from 'filepond-plugin-file-validate-type';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import FingerprintJS from '@fingerprintjs/fingerprintjs';
 import LZString from 'lz-string';
+import { jsonFetch } from '~/utils/http';
 
 registerPlugin(FilePondPluginFileValidateType);
 
@@ -66,26 +67,9 @@ const PRESIGN_URL = '/api/v1/uploads/presign';
 const COMPLETE_URL = '/api/v1/uploads/complete';
 const MAX_FILES = 10;
 
-function getXsrfToken(): string | null {
-    if (typeof document === 'undefined') return null;
-    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
-    return match ? decodeURIComponent(match[1]) : null;
-}
-
-function buildJsonHeaders(): Record<string, string> {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    const token = getXsrfToken();
-    if (token) {
-        headers['X-XSRF-TOKEN'] = token;
-    }
-    return headers;
-}
-
 async function getPresignedUrl(file: ActualFileObject, fingerprint: string): Promise<PresignResponse> {
-    const response = await fetch(PRESIGN_URL, {
+    return jsonFetch(PRESIGN_URL, {
         method: 'POST',
-        headers: buildJsonHeaders(),
-        credentials: 'same-origin',
         body: JSON.stringify({
             filename: file.name,
             size: file.size,
@@ -93,13 +77,6 @@ async function getPresignedUrl(file: ActualFileObject, fingerprint: string): Pro
             fingerprint,
         }),
     });
-
-    if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to get presigned URL');
-    }
-
-    return response.json();
 }
 
 async function uploadToS3(
@@ -139,19 +116,10 @@ async function uploadToS3(
 }
 
 async function completeUpload(key: string): Promise<CompleteResponse> {
-    const response = await fetch(COMPLETE_URL, {
+    return jsonFetch(COMPLETE_URL, {
         method: 'POST',
-        headers: buildJsonHeaders(),
-        credentials: 'same-origin',
         body: JSON.stringify({ key }),
     });
-
-    if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to complete upload');
-    }
-
-    return response.json();
 }
 
 async function processFileUpload(
