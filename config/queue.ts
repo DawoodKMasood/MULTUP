@@ -4,7 +4,6 @@ import { defineConfig } from '@rlanz/bull-queue'
 export default defineConfig({
   defaultConnection: {
     url: env.get('REDIS_URL'),
-    tls: {},
   },
 
   queue: {},
