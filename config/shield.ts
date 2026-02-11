@@ -10,7 +10,8 @@ const shieldConfig = defineConfig({
     enabled: true,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", 'https://static.cloudflareinsights.com', 'https://*.cloudflareinsights.com', 'https://*.cloudflare.com'],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", 'https://static.cloudflareinsights.com', 'https://*.cloudflareinsights.com', 'https://*.cloudflare.com'],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'blob:'],
       connectSrc: ["'self'", '*'],
