@@ -55,46 +55,81 @@ export default function Status({ mirrors, cachedAt }: StatusPageProps) {
             {mirrors.length === 0 ? (
               <div className="p-8 text-center text-gray-500">No mirrors configured</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Mirror Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status (Last 24 Hours)
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status (Last 1 Hour)
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {mirrors.map((mirror) => (
-                      <tr key={mirror.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              <>
+                {/* Desktop Table */}
+                <div className="overflow-x-auto hidden md:block">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Mirror Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status (Last 24 Hours)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status (Last 1 Hour)
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {mirrors.map((mirror) => (
+                        <tr key={mirror.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {mirror.logo ? (
+                              <img
+                                src={mirror.logo}
+                                alt={mirror.name}
+                                className="h-6 object-contain"
+                              />
+                            ) : (
+                              mirror.name
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <Heartbeat percentage={mirror.status24h} />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <Heartbeat percentage={mirror.status1h} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden divide-y divide-gray-100">
+                  {mirrors.map((mirror) => (
+                    <div key={mirror.id} className="p-4 hover:bg-gray-50">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="text-sm text-gray-500">Mirror Name:</div>
+                        <div className="text-sm font-medium text-gray-900 text-right">
                           {mirror.logo ? (
                             <img
                               src={mirror.logo}
                               alt={mirror.name}
-                              className="h-6 object-contain"
+                              className="h-6 object-contain ml-auto"
                             />
                           ) : (
                             mirror.name
                           )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        </div>
+
+                        <div className="text-sm text-gray-500">Status (24h):</div>
+                        <div className="flex justify-end">
                           <Heartbeat percentage={mirror.status24h} />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        </div>
+
+                        <div className="text-sm text-gray-500">Status (1h):</div>
+                        <div className="flex justify-end">
                           <Heartbeat percentage={mirror.status1h} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
 
