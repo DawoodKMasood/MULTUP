@@ -8,6 +8,7 @@ import env from '#start/env'
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import s3Client, { BUCKET } from '#services/s3_client'
+import { deleteS3Object } from '#services/s3_operations'
 
 interface MirrorFileJobPayload {
   fileId: string
@@ -77,6 +78,7 @@ export default class MirrorFileJob extends Job {
     await pAll(tasks, this.CONCURRENCY_LIMIT)
 
     await this.updateFileStatus(fileId)
+    await this.deleteFileFromS3(file)
   }
 
   private async processMirror(file: File, service: string): Promise<void> {
@@ -91,6 +93,7 @@ export default class MirrorFileJob extends Job {
       return
     }
 
+    const mirrorRecord = await Mirror.query().where('name', service).where('enabled', true).first()
     const { config, maxFileSize } = await this.getMirrorConfig(service)
     if (maxFileSize > 0 && file.size > maxFileSize) {
       return
@@ -100,6 +103,7 @@ export default class MirrorFileJob extends Job {
       existingMirror ||
       (await FileMirror.create({
         fileId: file.id,
+        mirrorId: mirrorRecord?.id || null,
         mirror: service,
         status: 'queued',
         attempts: 0,
@@ -263,6 +267,16 @@ export default class MirrorFileJob extends Job {
     const maxFileSize = typeof config.maxFileSize === 'number' ? config.maxFileSize : 0
 
     return { config, maxFileSize }
+  }
+
+  private async deleteFileFromS3(file: File): Promise<void> {
+    try {
+      await deleteS3Object(file.path)
+      logger.info({ fileId: file.id, path: file.path }, 'Deleted file from S3 after mirroring')
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      logger.error({ fileId: file.id, path: file.path, error: errorMessage }, 'Failed to delete file from S3')
+    }
   }
 
   async rescue(payload: MirrorFileJobPayload) {

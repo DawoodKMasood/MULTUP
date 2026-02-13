@@ -7,6 +7,7 @@ export default class extends BaseSchema {
     this.schema.createTable(this.tableName, (table) => {
       table.uuid('id').primary().defaultTo(this.raw('gen_random_uuid()'))
       table.uuid('file_id').notNullable().references('id').inTable('files').onDelete('CASCADE')
+      table.uuid('mirror_id').nullable().references('id').inTable('mirrors').onDelete('SET NULL')
       table.string('mirror').notNullable()
       table.string('status').notNullable()
       table.string('url').nullable()
@@ -17,6 +18,7 @@ export default class extends BaseSchema {
       table.timestamp('updated_at').nullable()
 
       table.index('file_id')
+      table.index('mirror_id')
       table.index('status')
     })
   }

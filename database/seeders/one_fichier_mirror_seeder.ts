@@ -14,6 +14,7 @@ export default class OneFichierMirrorSeeder extends BaseSeeder {
         },
         enabled: true,
         priority: 0,
+        logo: '/images/onefichier_com.png',
       }
     )
   }

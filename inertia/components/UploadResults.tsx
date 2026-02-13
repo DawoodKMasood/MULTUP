@@ -1,20 +1,21 @@
 import { useEffect, useState } from 'react';
 import LZString from 'lz-string';
+import { Link } from '@inertiajs/react';
 
 interface UploadResult {
-  id: number;
+  id: string;
   filename: string;
 }
 
 interface UploadData {
-  files: Array<{ name: string; id: number }>;
+  files: Array<{ name: string; id: string }>;
 }
 
 const UploadResults = () => {
   const [results, setResults] = useState<UploadResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -62,11 +63,11 @@ const UploadResults = () => {
     }
   }, []);
 
-  const getDownloadUrl = (id: number): string => {
+  const getDownloadUrl = (id: string): string => {
     return `${window.location.origin}/download/${id}`;
   };
 
-  const copyToClipboard = async (url: string, id: number) => {
+  const copyToClipboard = async (url: string, id: string) => {
     try {
       await navigator.clipboard.writeText(url);
       setCopiedId(id);
@@ -134,12 +135,12 @@ const UploadResults = () => {
                   >
                     {copiedId === result.id ? 'Copied' : 'Copy'}
                   </button>
-                  <a
+                  <Link
                     href={downloadUrl}
                     className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
                   >
                     Download
-                  </a>
+                  </Link>
                 </div>
               </div>
             );

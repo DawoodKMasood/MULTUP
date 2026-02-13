@@ -1,0 +1,81 @@
+import type { HttpContext } from '@adonisjs/core/http'
+import Mirror from '#models/mirror'
+import FileMirror from '#models/file_mirror'
+import { DateTime } from 'luxon'
+import logger from '@adonisjs/core/services/logger'
+
+interface MirrorStatusData {
+  id: string
+  name: string
+  status24h: number
+  status1h: number
+}
+
+interface StatusResponse {
+  mirrors: MirrorStatusData[]
+  cachedAt: string
+}
+
+export default class StatusController {
+  async index({ inertia, response }: HttpContext) {
+    try {
+      const mirrors = await Mirror.query().where('enabled', true).orderBy('priority', 'asc')
+
+      const now = DateTime.utc()
+      const twentyFourHoursAgo = now.minus({ hours: 24 })
+      const oneHourAgo = now.minus({ hours: 1 })
+
+      const mirrorIds = mirrors.map((m) => m.id)
+
+      const stats24h = await this.calculateMirrorStats(mirrorIds, twentyFourHoursAgo)
+      const stats1h = await this.calculateMirrorStats(mirrorIds, oneHourAgo)
+
+      const mirrorStatusData: MirrorStatusData[] = mirrors.map((mirror) => ({
+        id: mirror.id,
+        name: mirror.name,
+        status24h: stats24h.get(mirror.id) || 0,
+        status1h: stats1h.get(mirror.id) || 0,
+      }))
+
+      const result: StatusResponse = {
+        mirrors: mirrorStatusData,
+        cachedAt: now.toISO() || '',
+      }
+
+      return inertia.render('status', result)
+    } catch (error) {
+      logger.error({ error }, 'Failed to fetch mirror status data')
+      return response.internalServerError({ error: 'Failed to load status data' })
+    }
+  }
+
+  private async calculateMirrorStats(
+    mirrorIds: string[],
+    since: DateTime
+  ): Promise<Map<string, number>> {
+    const fileMirrors = await FileMirror.query()
+      .whereIn('mirror_id', mirrorIds)
+      .where('created_at', '>=', since.toSQL()!)
+      .select('mirror_id', 'status')
+
+    const statsByMirror = new Map<string, { total: number; done: number }>()
+
+    for (const fm of fileMirrors) {
+      if (!fm.mirrorId) continue
+      const current = statsByMirror.get(fm.mirrorId) || { total: 0, done: 0 }
+      current.total++
+      if (fm.status === 'done') {
+        current.done++
+      }
+      statsByMirror.set(fm.mirrorId, current)
+    }
+
+    const result = new Map<string, number>()
+    for (const [mirrorId, stats] of statsByMirror) {
+      const percentage = (stats.done / stats.total) * 100
+      result.set(mirrorId, Math.round(percentage / 10) * 10)
+    }
+
+    return result
+  }
+}

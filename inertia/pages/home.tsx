@@ -5,7 +5,7 @@ export default function Home() {
 
   return (
     <>
-      <Head title="MULTUP" />
+      <Head title="Homepage" />
       <FileUpload />
     </>
   )

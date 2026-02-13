@@ -8,6 +8,7 @@ export default class extends BaseSchema {
       table.uuid('id').primary().defaultTo(this.raw('gen_random_uuid()'))
       table.string('name').notNullable().unique()
       table.jsonb('config').nullable()
+      table.string('logo').nullable()
       table.boolean('enabled').notNullable().defaultTo(true)
       table.integer('priority').notNullable().defaultTo(0)
       table.timestamp('created_at').notNullable()
