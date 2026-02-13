@@ -38,7 +38,7 @@ export default function Heartbeat({ percentage }: HeartbeatProps) {
           return <div key={i} className={barClass} />
         })}
       </div>
-      <span className="text-sm font-medium text-gray-700 min-w-[4rem]">
+      <span className="text-sm font-medium text-gray-700 min-w-16">
         {formatPercentage(percentage)}%
       </span>
     </div>

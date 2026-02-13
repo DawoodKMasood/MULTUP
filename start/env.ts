@@ -48,7 +48,11 @@ export default await Env.create(new URL('../', import.meta.url), {
   | Variables for @rlanz/bull-queue
   |----------------------------------------------------------
   */
-  REDIS_URL: Env.schema.string(),
+  REDIS_HOST: Env.schema.string(),
+  REDIS_PORT: Env.schema.number.optional(),
+  REDIS_USERNAME: Env.schema.string.optional(),
+  REDIS_PASSWORD: Env.schema.string.optional(),
+  REDIS_DB: Env.schema.number.optional(),
   QUEUE_CONCURRENCY: Env.schema.number.optional(),
 
   /*
