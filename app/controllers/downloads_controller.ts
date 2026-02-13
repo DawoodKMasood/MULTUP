@@ -11,6 +11,7 @@ interface MirrorData {
   name: string
   status: string
   expiresAt: string | null
+  logo: string | null
 }
 
 interface FileData {
@@ -60,6 +61,7 @@ export default class DownloadsController {
 
       const fileMirrors = await FileMirror.query()
         .where('file_id', fileId)
+        .preload('mirrorRecord')
         .orderBy('created_at', 'asc')
 
       const mirrors: MirrorData[] = fileMirrors.map((mirror) => {
@@ -71,6 +73,7 @@ export default class DownloadsController {
           name: mirror.mirror,
           status: displayStatus,
           expiresAt: mirror.expiresAt?.toISO() || null,
+          logo: mirror.mirrorRecord?.logo || null,
         }
       })
 
@@ -114,6 +117,7 @@ export default class DownloadsController {
 
       const fileMirrors = await FileMirror.query()
         .where('file_id', fileId)
+        .preload('mirrorRecord')
         .orderBy('created_at', 'asc')
 
       const mirrors: MirrorData[] = fileMirrors.map((mirror) => {
@@ -125,6 +129,7 @@ export default class DownloadsController {
           name: mirror.mirror,
           status: displayStatus,
           expiresAt: mirror.expiresAt?.toISO() || null,
+          logo: mirror.mirrorRecord?.logo || null,
         }
       })
 
@@ -167,6 +172,7 @@ export default class DownloadsController {
         const fileMirror = await FileMirror.query({ client: trx })
           .where('id', mirrorId)
           .where('file_id', fileId)
+          .preload('mirrorRecord')
           .first()
 
         if (!fileMirror) {
@@ -190,6 +196,7 @@ export default class DownloadsController {
         const mirrorData = {
           id: fileMirror.id,
           name: fileMirror.mirror,
+          logo: fileMirror.mirrorRecord?.logo || null,
         }
 
         return {

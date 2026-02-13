@@ -6,6 +6,7 @@ interface MirrorStatus {
   name: string
   status24h: number
   status1h: number
+  logo: string | null
 }
 
 interface StatusPageProps {
@@ -73,7 +74,15 @@ export default function Status({ mirrors, cachedAt }: StatusPageProps) {
                     {mirrors.map((mirror) => (
                       <tr key={mirror.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {mirror.name}
+                          {mirror.logo ? (
+                            <img
+                              src={mirror.logo}
+                              alt={mirror.name}
+                              className="h-6 object-contain"
+                            />
+                          ) : (
+                            mirror.name
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <Heartbeat percentage={mirror.status24h} />

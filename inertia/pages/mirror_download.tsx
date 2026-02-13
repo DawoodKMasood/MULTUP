@@ -9,6 +9,7 @@ interface FileData {
 interface MirrorData {
   id: string
   name: string
+  logo: string | null
 }
 
 interface MirrorDownloadPageProps {
@@ -38,7 +39,17 @@ export default function MirrorDownload({ file, mirror, mirrorUrl }: MirrorDownlo
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Download from {mirror.name}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {mirror.logo ? (
+              <img
+                src={mirror.logo}
+                alt={mirror.name}
+                className="h-8 object-contain"
+              />
+            ) : (
+              `Download from ${mirror.name}`
+            )}
+          </h1>
           <p className="mt-2 text-gray-600">
             File: <span className="font-medium text-gray-900">{file.filename}</span>
           </p>
@@ -77,7 +88,7 @@ export default function MirrorDownload({ file, mirror, mirrorUrl }: MirrorDownlo
                 rel="noopener noreferrer"
                 className="block w-full text-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
               >
-                Download from {mirror.name}
+                {`Download from ${mirror.name}`}
               </a>
 
               {/* Warning Text */}

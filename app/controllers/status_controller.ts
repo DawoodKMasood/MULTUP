@@ -9,6 +9,7 @@ interface MirrorStatusData {
   name: string
   status24h: number
   status1h: number
+  logo: string | null
 }
 
 interface StatusResponse {
@@ -35,6 +36,7 @@ export default class StatusController {
         name: mirror.name,
         status24h: stats24h.get(mirror.id) || 0,
         status1h: stats1h.get(mirror.id) || 0,
+        logo: mirror.logo,
       }))
 
       const result: StatusResponse = {
