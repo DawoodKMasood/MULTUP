@@ -81,71 +81,60 @@ const UploadResults = () => {
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto py-4 px-4">
-        <div className="bg-white border rounded-lg shadow-sm p-8 text-center">
-          <p className="text-gray-600">Loading upload results...</p>
-        </div>
+      <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+        <p className="text-gray-600">Loading upload results...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto py-4 px-4">
-        <div className="bg-white border border-red-200 rounded-lg shadow-sm p-8">
-          <h2 className="text-xl font-semibold text-red-600 mb-2">Error</h2>
-          <p className="text-gray-600">{error}</p>
-        </div>
+      <div className="bg-white rounded-lg shadow-sm p-8">
+        <h2 className="text-xl font-semibold text-red-600 mb-2">Error</h2>
+        <p className="text-gray-600">{error}</p>
       </div>
     );
   }
 
   if (results.length === 0) {
     return (
-      <div className="max-w-6xl mx-auto py-4 px-4">
-        <div className="bg-white border rounded-lg shadow-sm p-8 text-center">
-          <p className="text-gray-600">No files uploaded</p>
-        </div>
+      <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+        <p className="text-gray-600">No files uploaded</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-4 px-4">
-      <div className="bg-white">
-        <p className="text-gray-600 mb-6">
-          Your files have been uploaded successfully. Use the links below to download them.
-        </p>
-        <div className="space-y-4">
-          {results.map((result) => {
-            const downloadUrl = getDownloadUrl(result.id);
-            return (
-              <div
-                key={result.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
-              >
-                <div className="flex-1 min-w-0 mr-4">
-                  <p className="text-sm font-medium text-gray-900 truncate">{result.filename}</p>
-                  <p className="text-xs text-gray-500 truncate mt-1">{downloadUrl}</p>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    onClick={() => copyToClipboard(downloadUrl, result.id)}
-                    className="px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition-colors"
-                  >
-                    {copiedId === result.id ? 'Copied' : 'Copy'}
-                  </button>
-                  <Link
-                    href={downloadUrl}
-                    className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-                  >
-                    Download
-                  </Link>
-                </div>
+    <div>
+      <div className="space-y-4">
+        {results.map((result) => {
+          const downloadUrl = getDownloadUrl(result.id);
+          return (
+            <div
+              key={result.id}
+              className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+            >
+              <div className="flex-1 min-w-0 mr-4">
+                <p className="text-sm font-medium text-gray-900 truncate">{result.filename}</p>
+                <p className="text-xs text-gray-500 truncate mt-1">{downloadUrl}</p>
               </div>
-            );
-          })}
-        </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => copyToClipboard(downloadUrl, result.id)}
+                  className="px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 rounded transition-colors"
+                >
+                  {copiedId === result.id ? 'Copied' : 'Copy'}
+                </button>
+                <Link
+                  href={downloadUrl}
+                  className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                >
+                  Download
+                </Link>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

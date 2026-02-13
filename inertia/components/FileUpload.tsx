@@ -217,33 +217,35 @@ const FileUpload = () => {
     const hasFiles = files.length > 0;
 
     return (
-        <div className='max-w-6xl mx-auto py-4 px-4'>
-            <FilePond
-                maxParallelUploads={5}
-                ref={pondRef}
-                files={files as unknown as (ActualFileObject | Blob | string)[]}
-                onupdatefiles={setFiles}
-                onprocessfile={handleProcessFile}
-                allowMultiple={true}
-                maxFiles={MAX_FILES}
-                server={serverConfig}
-                credits={false}
-                instantUpload={false}
-                allowRevert={false}
-                fileValidateTypeLabelExpectedTypes="File is of invalid type"
-                labelFileTypeNotAllowed="Invalid file extension"
-                labelIdle="Drag and Drop your files or <span class='filepond--label-action'>Browse</span>"
-                acceptedFileTypes={ACCEPTED_MIME_TYPES}
-                fileValidateTypeLabelExpectedTypesMap={FILE_TYPE_LABELS}
-            />
-            <div className='mt-4 flex gap-4'>
-                <button
-                    onClick={handleUploadAll}
-                    disabled={isUploading || !hasFiles}
-                    className='px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400'
-                >
-                    {isUploading ? 'Uploading...' : 'Upload'}
-                </button>
+        <div className="space-y-6">
+            <div>
+                <FilePond
+                    maxParallelUploads={5}
+                    ref={pondRef}
+                    files={files as unknown as (ActualFileObject | Blob | string)[]}
+                    onupdatefiles={setFiles}
+                    onprocessfile={handleProcessFile}
+                    allowMultiple={true}
+                    maxFiles={MAX_FILES}
+                    server={serverConfig}
+                    credits={false}
+                    instantUpload={false}
+                    allowRevert={false}
+                    fileValidateTypeLabelExpectedTypes="File is of invalid type"
+                    labelFileTypeNotAllowed="Invalid file extension"
+                    labelIdle="Drag and Drop your files or <span class='filepond--label-action'>Browse</span>"
+                    acceptedFileTypes={ACCEPTED_MIME_TYPES}
+                    fileValidateTypeLabelExpectedTypesMap={FILE_TYPE_LABELS}
+                />
+                <div className="mt-4 flex gap-4">
+                    <button
+                        onClick={handleUploadAll}
+                        disabled={isUploading || !hasFiles}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:bg-gray-400 transition-colors duration-200"
+                    >
+                        {isUploading ? 'Uploading...' : 'Upload'}
+                    </button>
+                </div>
             </div>
         </div>
     );

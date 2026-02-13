@@ -145,10 +145,11 @@ export default function Download({ file: initialFile, mirrors: initialMirrors }:
   return (
     <>
       <Head title={`Download ${file.filename}`} />
-      <div className="max-w-6xl mx-auto py-8 px-4">
-        <div className="bg-white mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">{file.filename}</h1>
-          <div className="flex items-center gap-4 text-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">{file.filename}</h1>
+          <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
             <div>
               <span className="text-gray-500">Size:</span>
               <span className="ml-2 font-medium text-gray-900">{formatFileSize(file.size)}</span>
@@ -164,75 +165,79 @@ export default function Download({ file: initialFile, mirrors: initialMirrors }:
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-zinc-300 overflow-hidden">
-          <div className="px-6 py-4 border-b border-zinc-300 overflow-hidden">
-            <h2 className="text-lg font-semibold text-gray-900">Download Mirrors</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              {hasAvailableMirrors
-                ? 'Select a mirror below to download your file'
-                : 'No download mirrors available at this time'}
-            </p>
-          </div>
-
-          {mirrors.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No mirrors found for this file</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Mirror
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Expires
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Download
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {mirrors.map((mirror) => (
-                    <tr key={mirror.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {mirror.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(
-                            mirror.status
-                          )}`}
-                        >
-                          {getStatusLabel(mirror.status)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {mirror.expiresAt ? formatDate(mirror.expiresAt) : 'Never'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {mirror.status === 'done' ? (
-                          <Link
-                            href={`/download/${file.id}/${mirror.id}`}
-                            className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded transition-colors"
-                          >
-                            Download
-                          </Link>
-                        ) : (
-                          <span className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-400 text-sm font-medium rounded cursor-not-allowed">
-                            Unavailable
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Content Cards */}
+        <div className="space-y-6">
+          {/* Mirrors Card */}
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="px-6 py-4 bg-gray-50">
+              <h2 className="text-lg font-semibold text-gray-900">Download Mirrors</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                {hasAvailableMirrors
+                  ? 'Select a mirror below to download your file'
+                  : 'No download mirrors available at this time'}
+              </p>
             </div>
-          )}
+
+            {mirrors.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">No mirrors found for this file</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Mirror Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Expires
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Download
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {mirrors.map((mirror) => (
+                      <tr key={mirror.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {mirror.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(
+                              mirror.status
+                            )}`}
+                          >
+                            {getStatusLabel(mirror.status)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {mirror.expiresAt ? formatDate(mirror.expiresAt) : 'Never'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {mirror.status === 'done' ? (
+                            <Link
+                              href={`/download/${file.id}/${mirror.id}`}
+                              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
+                            >
+                              Download
+                            </Link>
+                          ) : (
+                            <span className="inline-flex items-center px-4 py-2 bg-gray-200 text-gray-400 text-sm font-medium rounded-md cursor-not-allowed transition-colors">
+                              Unavailable
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>

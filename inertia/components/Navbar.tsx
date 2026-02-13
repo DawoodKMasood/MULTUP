@@ -3,7 +3,7 @@ import { Link } from "@inertiajs/react";
 const Navbar = () => {
   return (
     <nav className="bg-white border-b border-zinc-300">
-      <div className="max-w-6xl mx-auto py-4 px-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex justify-between">
           <div className="flex space-x-7 items-center">
             <div>

@@ -73,7 +73,7 @@ export default class StatusController {
     const result = new Map<string, number>()
     for (const [mirrorId, stats] of statsByMirror) {
       const percentage = (stats.done / stats.total) * 100
-      result.set(mirrorId, Math.round(percentage / 10) * 10)
+      result.set(mirrorId, Math.round(percentage * 100) / 100)
     }
 
     return result

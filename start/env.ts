@@ -49,6 +49,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   |----------------------------------------------------------
   */
   REDIS_URL: Env.schema.string(),
+  QUEUE_CONCURRENCY: Env.schema.number.optional(),
 
   /*
   |----------------------------------------------------------

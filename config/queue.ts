@@ -8,7 +8,9 @@ export default defineConfig({
 
   queue: {},
 
-  worker: {},
+  worker: {
+    concurrency: Number(env.get('QUEUE_CONCURRENCY', 100)),
+  },
 
   jobs: {
     /*
