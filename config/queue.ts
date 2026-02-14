@@ -39,7 +39,7 @@ export default defineConfig({
     | @see https://docs.bullmq.io/guide/queues/auto-removal-of-jobs
     |
     */
-    removeOnComplete: 100,
-    removeOnFail: 100,
+    removeOnComplete: true,
+    removeOnFail: true,
   },
 })

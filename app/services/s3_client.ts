@@ -1,17 +1,7 @@
 import env from '#start/env'
 import { S3Client } from '@aws-sdk/client-s3'
 import { NodeHttpHandler } from '@smithy/node-http-handler'
-import https from 'https'
-
-const sslEnabled = env.get('S3_SSL_ENABLED', 'true') !== 'false'
-
-const requestHandler = sslEnabled
-  ? undefined
-  : new NodeHttpHandler({
-      httpsAgent: new https.Agent({
-        rejectUnauthorized: false,
-      }),
-    })
+import https from 'node:https'
 
 const s3Client = new S3Client({
   region: env.get('AWS_REGION'),
@@ -21,7 +11,12 @@ const s3Client = new S3Client({
     secretAccessKey: env.get('AWS_SECRET_ACCESS_KEY'),
   },
   forcePathStyle: true,
-  requestHandler,
+  requestHandler: new NodeHttpHandler({
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: true,
+      keepAlive: true,
+    }),
+  }),
 })
 
 export const BUCKET = env.get('S3_BUCKET')
