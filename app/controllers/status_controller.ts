@@ -28,6 +28,13 @@ export default class StatusController {
 
       const mirrorIds = mirrors.map((m) => m.id)
 
+      if (mirrorIds.length === 0) {
+        return inertia.render('status', {
+          mirrors: [],
+          cachedAt: now.toISO() || '',
+        })
+      }
+
       const stats24h = await this.calculateMirrorStats(mirrorIds, twentyFourHoursAgo)
       const stats1h = await this.calculateMirrorStats(mirrorIds, oneHourAgo)
 
@@ -46,7 +53,11 @@ export default class StatusController {
 
       return inertia.render('status', result)
     } catch (error) {
-      logger.error({ error }, 'Failed to fetch mirror status data')
+      logger.error({
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        type: error?.constructor?.name || typeof error,
+      }, 'Failed to fetch mirror status data')
       return response.internalServerError({ error: 'Failed to load status data' })
     }
   }
@@ -55,9 +66,18 @@ export default class StatusController {
     mirrorIds: string[],
     since: DateTime
   ): Promise<Map<string, number>> {
+    if (mirrorIds.length === 0) {
+      return new Map()
+    }
+
+    const sinceSQL = since.toSQL()
+    if (!sinceSQL) {
+      return new Map()
+    }
+
     const fileMirrors = await FileMirror.query()
       .whereIn('mirror_id', mirrorIds)
-      .where('created_at', '>=', since.toSQL()!)
+      .where('created_at', '>=', sinceSQL)
       .select('mirror_id', 'status')
 
     const statsByMirror = new Map<string, { total: number; done: number }>()
