@@ -98,11 +98,15 @@ export default function Download({ file: initialFile, mirrors: initialMirrors }:
   const [file, setFile] = useState<FileData>(initialFile)
   const [mirrors, setMirrors] = useState<Mirror[]>(initialMirrors)
   const requestRef = useRef<number>(0)
+  const mirrorsRef = useRef<Mirror[]>(initialMirrors)
+
+  // Keep mirrorsRef in sync with mirrors state
+  mirrorsRef.current = mirrors
 
   const hasAvailableMirrors = mirrors.some((m) => m.status === 'done')
 
   useEffect(() => {
-    if (!shouldPoll(file.status, mirrors)) {
+    if (!shouldPoll(file.status, mirrorsRef.current)) {
       return
     }
 
@@ -141,7 +145,7 @@ export default function Download({ file: initialFile, mirrors: initialMirrors }:
       clearInterval(intervalId)
       ++requestRef.current
     }
-  }, [file.id, file.status, mirrors])
+  }, [file.id, file.status])
 
   return (
     <>
