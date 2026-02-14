@@ -5,7 +5,11 @@ import logger from '@adonisjs/core/services/logger'
 import queue from '@rlanz/bull-queue/services/main'
 import MirrorFileJob from '#jobs/mirror_file_job'
 import uploadConfig from '#config/upload'
-import { PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3'
+import {
+  PutObjectCommand,
+  HeadObjectCommand,
+  type HeadObjectCommandOutput,
+} from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import s3Client, { BUCKET } from '#services/s3_client'
 import {
@@ -161,55 +165,91 @@ export default class UploadsController {
       return response.badRequest({ error: 'Invalid or missing S3 key' })
     }
 
+    let headResult: HeadObjectCommandOutput
+
     try {
-      const headResult = await s3Client.send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }))
-      const metadataResult = extractAndValidateMetadata(headResult.Metadata || {})
-
-      if ('valid' in metadataResult && !metadataResult.valid) {
-        logger.warn({ key }, 'S3 object missing required metadata - possible direct upload bypass')
-        return response.badRequest(metadataResult.error)
+      headResult = await s3Client.send(new HeadObjectCommand({ Bucket: BUCKET, Key: key }))
+    } catch (error: any) {
+      if (error.name === 'NotFound' || error.name === 'NoSuchKey') {
+        return response.badRequest({ error: 'File not found in storage' })
       }
+      logger.error({ error, key }, 'Failed to fetch S3 object metadata')
+      return response.internalServerError({ error: 'Failed to fetch file metadata' })
+    }
 
-      const approved = metadataResult as UploadMetadata
-      const actualSize = headResult.ContentLength
-      const actualMimeType = headResult.ContentType?.toLowerCase() || 'application/octet-stream'
+    let metadataResult: ValidationResult | UploadMetadata
 
-      if (actualSize === undefined || actualSize === null) {
-        return response.badRequest({ error: 'Could not determine actual file size' })
-      }
+    try {
+      metadataResult = extractAndValidateMetadata(headResult.Metadata || {})
+    } catch (error) {
+      logger.error({ error, key }, 'Failed to parse S3 metadata')
+      return response.internalServerError({ error: 'Failed to parse file metadata' })
+    }
 
-      const sizeDiff = Math.abs(actualSize - approved.size)
-      if (sizeDiff > SIZE_TOLERANCE_BYTES) {
-        logger.warn({ key, actualSize, approvedSize: approved.size, difference: sizeDiff }, 'File size mismatch')
+    if ('valid' in metadataResult && !metadataResult.valid) {
+      logger.warn({ key }, 'S3 object missing required metadata - possible direct upload bypass')
+      return response.badRequest(metadataResult.error)
+    }
+
+    const approved = metadataResult as UploadMetadata
+    const actualSize = headResult.ContentLength
+    const actualMimeType = headResult.ContentType?.toLowerCase() || 'application/octet-stream'
+
+    if (actualSize === undefined || actualSize === null) {
+      return response.badRequest({ error: 'Could not determine actual file size' })
+    }
+
+    const sizeDiff = Math.abs(actualSize - approved.size)
+    if (sizeDiff > SIZE_TOLERANCE_BYTES) {
+      logger.warn({ key, actualSize, approvedSize: approved.size, difference: sizeDiff }, 'File size mismatch')
+      try {
         await deleteS3Object(key)
-        return response.badRequest({
-          error: 'File size does not match declared size',
-          actualSize,
-          declaredSize: approved.size,
-        })
+      } catch (error) {
+        logger.error({ error, key }, 'Failed to delete S3 object after size mismatch')
       }
+      return response.badRequest({
+        error: 'File size does not match declared size',
+        actualSize,
+        declaredSize: approved.size,
+      })
+    }
 
-      if (actualMimeType !== approved.mimeType) {
-        logger.warn({ key, actualMimeType, approvedMimeType: approved.mimeType }, 'MIME type mismatch')
+    if (actualMimeType !== approved.mimeType) {
+      logger.warn({ key, actualMimeType, approvedMimeType: approved.mimeType }, 'MIME type mismatch')
+      try {
         await deleteS3Object(key)
-        return response.badRequest({
-          error: 'MIME type does not match declared type',
-          actualMimeType,
-          declaredMimeType: approved.mimeType,
-        })
+      } catch (error) {
+        logger.error({ error, key }, 'Failed to delete S3 object after MIME type mismatch')
       }
+      return response.badRequest({
+        error: 'MIME type does not match declared type',
+        actualMimeType,
+        declaredMimeType: approved.mimeType,
+      })
+    }
 
-      if (!isMimeTypeAllowed(actualMimeType)) {
+    if (!isMimeTypeAllowed(actualMimeType)) {
+      try {
         await deleteS3Object(key)
-        return response.badRequest({ error: 'File type not allowed' })
+      } catch (error) {
+        logger.error({ error, key }, 'Failed to delete S3 object after disallowed MIME type')
       }
+      return response.badRequest({ error: 'File type not allowed' })
+    }
 
-      if (actualSize > uploadConfig.maxFileSize) {
+    if (actualSize > uploadConfig.maxFileSize) {
+      try {
         await deleteS3Object(key)
-        return response.badRequest({ error: 'File size exceeds maximum allowed', maxSize: uploadConfig.maxFileSize })
+      } catch (error) {
+        logger.error({ error, key }, 'Failed to delete S3 object after size limit check')
       }
+      return response.badRequest({ error: 'File size exceeds maximum allowed', maxSize: uploadConfig.maxFileSize })
+    }
 
-      const fileRecord = await File.create({
+    let fileRecord: File
+
+    try {
+      fileRecord = await File.create({
         filename: approved.filename,
         size: actualSize,
         status: 'pending',
@@ -217,27 +257,24 @@ export default class UploadsController {
         path: key,
         fingerprint: approved.fingerprint,
       })
-
-      try {
-        await queue.dispatch(MirrorFileJob, { fileId: fileRecord.id })
-      } catch (queueError) {
-        logger.error({ fileId: fileRecord.id, error: queueError }, 'Queue dispatch failed')
-      }
-
-      return response.json({
-        id: fileRecord.id,
-        filename: fileRecord.filename,
-        size: actualSize,
-        mimeType: actualMimeType,
-        status: fileRecord.status,
-        message: 'File upload completed successfully',
-      })
-    } catch (error: any) {
-      if (error.name === 'NotFound' || error.name === 'NoSuchKey') {
-        return response.badRequest({ error: 'File not found in storage' })
-      }
-      logger.error({ error, key }, 'Failed to complete upload')
-      return response.internalServerError({ error: 'Failed to complete upload' })
+    } catch (error) {
+      logger.error({ error, key }, 'Failed to create file record')
+      return response.internalServerError({ error: 'Failed to persist file record' })
     }
+
+    try {
+      await queue.dispatch(MirrorFileJob, { fileId: fileRecord.id })
+    } catch (queueError) {
+      logger.error({ fileId: fileRecord.id, error: queueError }, 'Queue dispatch failed')
+    }
+
+    return response.json({
+      id: fileRecord.id,
+      filename: fileRecord.filename,
+      size: actualSize,
+      mimeType: actualMimeType,
+      status: fileRecord.status,
+      message: 'File upload completed successfully',
+    })
   }
 }
