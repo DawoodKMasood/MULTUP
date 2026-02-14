@@ -13,8 +13,7 @@ const s3Client = new S3Client({
   forcePathStyle: true,
   requestHandler: new NodeHttpHandler({
     httpsAgent: new https.Agent({
-      rejectUnauthorized: true,
-      keepAlive: true,
+      rejectUnauthorized: false,
     }),
   }),
 })
