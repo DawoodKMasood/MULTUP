@@ -41,8 +41,8 @@ export default class StatusController {
       const mirrorStatusData: MirrorStatusData[] = mirrors.map((mirror) => ({
         id: mirror.id,
         name: mirror.name,
-        status24h: stats24h.get(mirror.id) || 0,
-        status1h: stats1h.get(mirror.id) || 0,
+        status24h: stats24h.get(mirror.id) ?? 100,
+        status1h: stats1h.get(mirror.id) ?? 100,
         logo: mirror.logo,
       }))
 
