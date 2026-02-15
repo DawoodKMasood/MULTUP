@@ -21,43 +21,21 @@ interface StatusResponse {
 export default class StatusController {
   async index({ inertia, response }: HttpContext) {
     try {
-      const cacheKey = 'status:page'
-      const result = await cache.getOrSet({
-        key: cacheKey,
-        ttl: '10m',
-        factory: async (): Promise<StatusResponse> => {
-          const mirrors = await Mirror.query().where('enabled', true).orderBy('priority', 'asc')
+      const cacheKey = 'status:page:v1'
+      let result: StatusResponse
 
-          const now = DateTime.utc()
-          const twentyFourHoursAgo = now.minus({ hours: 24 })
-          const oneHourAgo = now.minus({ hours: 1 })
-
-          const mirrorIds = mirrors.map((m) => m.id)
-
-          if (mirrorIds.length === 0) {
-            return {
-              mirrors: [],
-              cachedAt: now.toISO() || '',
-            }
-          }
-
-          const stats24h = await this.calculateMirrorStats(mirrorIds, twentyFourHoursAgo)
-          const stats1h = await this.calculateMirrorStats(mirrorIds, oneHourAgo)
-
-          const mirrorStatusData: MirrorStatusData[] = mirrors.map((mirror) => ({
-            id: mirror.id,
-            name: mirror.name,
-            status24h: stats24h.get(mirror.id) ?? 100,
-            status1h: stats1h.get(mirror.id) ?? 100,
-            logo: mirror.logo,
-          }))
-
-          return {
-            mirrors: mirrorStatusData,
-            cachedAt: now.toISO() || '',
-          }
-        },
-      })
+      try {
+        result = await cache.getOrSet({
+          key: cacheKey,
+          ttl: '10m',
+          factory: async (): Promise<StatusResponse> => {
+            return await this.fetchStatusData()
+          },
+        })
+      } catch (cacheError) {
+        logger.warn({ error: String(cacheError) }, 'Cache failed, falling back to database')
+        result = await this.fetchStatusData()
+      }
 
       return inertia.render('status', result)
     } catch (error) {
@@ -102,10 +80,43 @@ export default class StatusController {
 
     const result = new Map<string, number>()
     for (const [mirrorId, stats] of statsByMirror) {
-      const percentage = (stats.done / stats.total) * 100
+      const percentage = stats.total > 0 ? (stats.done / stats.total) * 100 : 0
       result.set(mirrorId, Math.round(percentage * 100) / 100)
     }
 
     return result
+  }
+
+  private async fetchStatusData(): Promise<StatusResponse> {
+    const mirrors = await Mirror.query().where('enabled', true).orderBy('priority', 'asc')
+
+    const now = DateTime.utc()
+    const twentyFourHoursAgo = now.minus({ hours: 24 })
+    const oneHourAgo = now.minus({ hours: 1 })
+
+    const mirrorIds = mirrors.map((m) => m.id)
+
+    if (mirrorIds.length === 0) {
+      return {
+        mirrors: [],
+        cachedAt: now.toISO() || '',
+      }
+    }
+
+    const stats24h = await this.calculateMirrorStats(mirrorIds, twentyFourHoursAgo)
+    const stats1h = await this.calculateMirrorStats(mirrorIds, oneHourAgo)
+
+    const mirrorStatusData: MirrorStatusData[] = mirrors.map((mirror) => ({
+      id: mirror.id,
+      name: mirror.name,
+      status24h: stats24h.get(mirror.id) ?? 100,
+      status1h: stats1h.get(mirror.id) ?? 100,
+      logo: mirror.logo,
+    }))
+
+    return {
+      mirrors: mirrorStatusData,
+      cachedAt: now.toISO() || '',
+    }
   }
 }
