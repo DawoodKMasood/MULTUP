@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Mirror from '#models/mirror'
 import FileMirror from '#models/file_mirror'
+import cache from '@adonisjs/cache/services/main'
 import { DateTime } from 'luxon'
 import logger from '@adonisjs/core/services/logger'
 
@@ -20,36 +21,43 @@ interface StatusResponse {
 export default class StatusController {
   async index({ inertia, response }: HttpContext) {
     try {
-      const mirrors = await Mirror.query().where('enabled', true).orderBy('priority', 'asc')
+      const cacheKey = 'status:page'
+      const result = await cache.getOrSet({
+        key: cacheKey,
+        ttl: '10m',
+        factory: async (): Promise<StatusResponse> => {
+          const mirrors = await Mirror.query().where('enabled', true).orderBy('priority', 'asc')
 
-      const now = DateTime.utc()
-      const twentyFourHoursAgo = now.minus({ hours: 24 })
-      const oneHourAgo = now.minus({ hours: 1 })
+          const now = DateTime.utc()
+          const twentyFourHoursAgo = now.minus({ hours: 24 })
+          const oneHourAgo = now.minus({ hours: 1 })
 
-      const mirrorIds = mirrors.map((m) => m.id)
+          const mirrorIds = mirrors.map((m) => m.id)
 
-      if (mirrorIds.length === 0) {
-        return inertia.render('status', {
-          mirrors: [],
-          cachedAt: now.toISO() || '',
-        })
-      }
+          if (mirrorIds.length === 0) {
+            return {
+              mirrors: [],
+              cachedAt: now.toISO() || '',
+            }
+          }
 
-      const stats24h = await this.calculateMirrorStats(mirrorIds, twentyFourHoursAgo)
-      const stats1h = await this.calculateMirrorStats(mirrorIds, oneHourAgo)
+          const stats24h = await this.calculateMirrorStats(mirrorIds, twentyFourHoursAgo)
+          const stats1h = await this.calculateMirrorStats(mirrorIds, oneHourAgo)
 
-      const mirrorStatusData: MirrorStatusData[] = mirrors.map((mirror) => ({
-        id: mirror.id,
-        name: mirror.name,
-        status24h: stats24h.get(mirror.id) ?? 100,
-        status1h: stats1h.get(mirror.id) ?? 100,
-        logo: mirror.logo,
-      }))
+          const mirrorStatusData: MirrorStatusData[] = mirrors.map((mirror) => ({
+            id: mirror.id,
+            name: mirror.name,
+            status24h: stats24h.get(mirror.id) ?? 100,
+            status1h: stats1h.get(mirror.id) ?? 100,
+            logo: mirror.logo,
+          }))
 
-      const result: StatusResponse = {
-        mirrors: mirrorStatusData,
-        cachedAt: now.toISO() || '',
-      }
+          return {
+            mirrors: mirrorStatusData,
+            cachedAt: now.toISO() || '',
+          }
+        },
+      })
 
       return inertia.render('status', result)
     } catch (error) {
